@@ -1,4 +1,15 @@
-import React, { createContext, useState, useRef, ReactElement } from "react";
+import React, {
+  createContext,
+  useState,
+  useRef,
+  ReactElement,
+  useMemo,
+  useEffect,
+} from "react";
+import set from "lodash/set";
+import merge from "lodash/merge";
+import get from "lodash/get";
+import { convertObjectValueToString } from "../../utils";
 
 interface IKeyValuePair {
   [name: string]: string;
@@ -6,11 +17,11 @@ interface IKeyValuePair {
 
 interface IForm {
   children: ReactElement[];
-  initialData?: IKeyValuePair;
+  data?: { [name: string]: any };
   onSubmit: (props: { isValid?: boolean; formData: IKeyValuePair }) => void;
 }
 
-interface IFormValidation {
+export interface IFormValidation {
   message: string;
   expression: (data: string) => boolean;
 }
@@ -21,6 +32,7 @@ interface IFormContext {
   getFieldValue: (name: string) => string;
   setFormError: (name: string, value: string) => void;
   setFormValue: (name: string, value: string) => void;
+  setFieldRequiredValidation: (name: string, message: string) => void;
   setFieldValidations: (name: string, validations: IFormValidation[]) => void;
   triggerFieldValidation: (name: string, value: string) => string;
 }
@@ -28,9 +40,24 @@ interface IFormContext {
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const { children, initialData = {}, onSubmit } = props;
+  const { children, data = {}, onSubmit } = props;
 
-  const [formData, setFormData] = useState<IKeyValuePair>(initialData);
+  const [modifiedData, setModifiedData] = useState<IKeyValuePair>({});
+  const formData = useMemo(
+    () => merge({}, modifiedData, data),
+    [modifiedData, data]
+  );
+  useEffect(() => {
+    console.log("modifiedData", modifiedData);
+  }, [modifiedData]);
+
+  useEffect(() => {
+    console.log("formData", formData);
+  }, [formData]);
+
+  const [requiredValidation, setRequiredValidation] = useState<IKeyValuePair>(
+    {}
+  );
   const [validations, setValidations] = useState<{
     [key: string]: IFormValidation[];
   }>({});
@@ -43,7 +70,7 @@ export function Form(props: IForm) {
   };
 
   const getFieldValue = (name: string): string => {
-    return formData[name];
+    return get(formData, name);
   };
 
   const setFormError = (name: string, value: string) => {
@@ -51,9 +78,10 @@ export function Form(props: IForm) {
   };
 
   const setFormValue = (name: string, value: string) => {
-    setFormData((prev) => ({
+    const toMerge = set({}, name, value);
+    setModifiedData((prev) => ({
       ...prev,
-      [name]: value,
+      ...merge({}, prev, toMerge),
     }));
   };
 
@@ -64,9 +92,18 @@ export function Form(props: IForm) {
     setValidations((prev) => ({ ...prev, [name]: validations }));
   };
 
+  const setFieldRequiredValidation = (name: string, message: string) => {
+    setRequiredValidation((prev) => ({ ...prev, [name]: message }));
+  };
+
   const triggerFieldValidation = (name: string, value: string): string => {
+    if (value === "" && !!requiredValidation[name]) {
+      return requiredValidation[name];
+    } else if (value === "" && !requiredValidation[name]) {
+      return "";
+    }
     let validationMessage = "";
-    validations[name].some((validation) => {
+    validations[name]?.some((validation) => {
       const validationResult = validation.expression(value);
       if (!!validationResult) {
         validationMessage = validation.message;
@@ -89,6 +126,8 @@ export function Form(props: IForm) {
     onSubmit({ isValid, formData });
   };
 
+  // console.log(formData);
+
   return (
     <FormContext.Provider
       value={{
@@ -96,6 +135,7 @@ export function Form(props: IForm) {
         getFieldError,
         setFormError,
         setFormValue,
+        setFieldRequiredValidation,
         setFieldValidations,
         triggerFieldValidation,
         getFieldValue,

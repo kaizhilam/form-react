@@ -11,8 +11,8 @@ interface IInput {
     expression: (data: string) => boolean;
   }[];
   value?: string;
-  onBlur?: (event: React.FormEvent<HTMLInputElement>) => void;
-  onChange?: (event: React.FormEvent<HTMLInputElement>) => void;
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function Input(props: IInput) {

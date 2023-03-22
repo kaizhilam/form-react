@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { ControlGroup, Form, FormItem, Input, Radio, Test } from "./components";
+import { Regex } from "./utils/regex";
 
 function App() {
+  const data = {
+    lastName: 1,
+    gender: "male",
+    list: [1, 2, 3, 4],
+    object: { aaa: 111 },
+  };
   return (
     <div className="App">
       <Form
-        initialData={{
-          // firstName: "first name",
-          lastName: "last name",
-          gender: "male",
-        }}
+        data={data}
         onSubmit={({ isValid, formData }) => {
           console.log(formData);
           if (isValid) {
@@ -24,6 +27,10 @@ function App() {
           required
           validations={[
             {
+              message: 'Need your first name',
+              type: 'required'
+            },
+            {
               message: "Value must not be first name",
               expression: (data) => {
                 return data === "first name";
@@ -31,49 +38,28 @@ function App() {
             },
           ]}
         >
-          {(props: any, { setFieldValue }: any) => (
-            <Input {...props} onBlur={setFieldValue} />
-          )}
+          {(props, { setFieldValue, setFormValue }) => {
+            return <Input {...props} />;
+          }}
         </FormItem>
         <br />
         <FormItem
-          id="lname"
-          name="lastName"
-          label="last name:"
-          validations={[
-            {
-              message: "Value must not be last name",
-              expression: (data) => {
-                return data === "last name";
-              },
-            },
-          ]}
-        >
-          {(props: any, { setFieldValue }: any) => (
-            <Input {...props} onBlur={setFieldValue} />
-          )}
-        </FormItem>
-        <br />
-        <FormItem
-          id="genderId"
-          name="gender"
-          label="Choose now"
+          id="birthday"
+          name="birthday"
+          label="Birthday"
           required
           validations={[
             {
-              message: "Value must be female",
+              message: "Value must be in the format of dd/mm/yyyy",
               expression: (data) => {
-                return data !== "female";
+                return !Regex.ddmmyyyy.test(data);
               },
             },
           ]}
         >
-          {(props: any, { setFieldValue }: any) => (
-            <ControlGroup {...props} onChange={setFieldValue}>
-              <Radio id="male" label="Male" value="male" />
-              <Radio id="female" label="Female" value="female" />
-            </ControlGroup>
-          )}
+          {(props, { setFieldValue }) => {
+            return <Input {...props} />;
+          }}
         </FormItem>
         <br />
         <input type="submit" value="Submit" />
