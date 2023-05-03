@@ -12,6 +12,7 @@ interface IRestProps {
   value: string;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 interface IFormItemAction {
@@ -36,6 +37,7 @@ interface IFormItem {
   }[];
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export function FormItem(props: IFormItem) {
@@ -44,8 +46,9 @@ export function FormItem(props: IFormItem) {
     children,
     name,
     required = false,
-    onChange,
     onBlur,
+    onChange,
+    onFocus,
     ...restProps
   } = props;
 
@@ -60,6 +63,7 @@ export function FormItem(props: IFormItem) {
   } = useContext(FormContext);
 
   const [value, setValue] = useState<string>(get(formData, name) || "");
+  const [focused, setFocused] = React.useState<boolean>(false);
 
   useEffect(() => {
     let requiredValidationMessage = "This field is required.";
@@ -80,12 +84,12 @@ export function FormItem(props: IFormItem) {
     setFieldValidations(name, cleanValidation);
   }, []);
 
-  // const useEffectDependency = formData[name];
-  // useEffect(() => {
-  //   if (useEffectDependency !== value) {
-  //     useEffectDependency && setValue(useEffectDependency);
-  //   }
-  // }, [useEffectDependency]);
+  const useEffectDependency = formData[name];
+  useEffect(() => {
+    if (useEffectDependency !== value && !focused) {
+      useEffectDependency && setValue(useEffectDependency);
+    }
+  }, [useEffectDependency]);
 
   const setFieldValue = (value: string) => {
     const validationMessage = triggerFieldValidation(name, value);
@@ -96,6 +100,7 @@ export function FormItem(props: IFormItem) {
   };
 
   const formItemOnBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    setFocused(false);
     const { value } = event.target;
     setFieldValue(value);
     onBlur?.(event);
@@ -104,6 +109,11 @@ export function FormItem(props: IFormItem) {
   const formItemOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setValue(event.target.value);
     onChange?.(event);
+  };
+
+  const formItemOnFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    setFocused(true);
+    onFocus?.(event);
   };
 
   const error = getFieldError(name);
@@ -115,8 +125,9 @@ export function FormItem(props: IFormItem) {
       name,
       required,
       value,
-      onChange: formItemOnChange,
       onBlur: formItemOnBlur,
+      onChange: formItemOnChange,
+      onFocus: formItemOnFocus,
     },
     {
       setFieldValue,

@@ -13,7 +13,7 @@ export function Radio(props: IRadio) {
   const { checked, id, label, name, value, onChange } = props;
 
   return (
-    <div>
+    <>
       <input
         id={id}
         name={name}
@@ -23,6 +23,6 @@ export function Radio(props: IRadio) {
         checked={checked}
       />
       <label htmlFor={id}>{label}</label>
-    </div>
+    </>
   );
 }

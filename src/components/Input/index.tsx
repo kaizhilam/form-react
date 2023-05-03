@@ -13,6 +13,7 @@ interface IInput {
   value?: string;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export function Input(props: IInput) {
@@ -25,6 +26,8 @@ export function Input(props: IInput) {
     value,
     onBlur,
     onChange,
+    onFocus,
+    ...restProps
   } = props;
   return (
     <>
@@ -36,6 +39,8 @@ export function Input(props: IInput) {
         value={value}
         onBlur={onBlur}
         onChange={onChange}
+        onFocus={onFocus}
+        {...restProps}
       />
       {error ?? <p>{error}</p>}
     </>

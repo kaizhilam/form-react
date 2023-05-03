@@ -8,8 +8,8 @@ import React, {
 } from "react";
 import set from "lodash/set";
 import merge from "lodash/merge";
+import mergeWith from "lodash/mergeWith";
 import get from "lodash/get";
-import { convertObjectValueToString } from "../../utils";
 
 interface IKeyValuePair {
   [name: string]: string;
@@ -44,7 +44,13 @@ export function Form(props: IForm) {
 
   const [modifiedData, setModifiedData] = useState<IKeyValuePair>({});
   const formData = useMemo(
-    () => merge({}, modifiedData, data),
+    () =>
+      mergeWith({}, data, modifiedData, (objValue, srcValue) => {
+        if (srcValue === "") {
+          return objValue;
+        }
+        return srcValue;
+      }),
     [modifiedData, data]
   );
   useEffect(() => {

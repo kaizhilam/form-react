@@ -1,14 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ControlGroup, Form, FormItem, Input, Radio, Test } from "./components";
 import { Regex } from "./utils/regex";
 
 function App() {
-  const data = {
-    lastName: 1,
-    gender: "male",
-    list: [1, 2, 3, 4],
-    object: { aaa: 111 },
-  };
+  const [data, setData] = useState({
+    character: {
+      name: {
+        last: "lastname",
+        first: "firstname",
+      },
+    },
+    randomNumber: 1,
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setData({
+        ...data,
+        randomNumber: Math.floor(Math.random() * 100),
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="App">
       <Form
@@ -22,13 +36,12 @@ function App() {
       >
         <FormItem
           id="fname"
-          name="firstName"
+          name="character.name.first"
           label="first name"
-          required
           validations={[
             {
-              message: 'Need your first name',
-              type: 'required'
+              message: "Need your first name",
+              type: "required",
             },
             {
               message: "Value must not be first name",
@@ -43,11 +56,16 @@ function App() {
           }}
         </FormItem>
         <br />
+        <FormItem id="randomNumber" name="randomNumber" label="Random number">
+          {(props, { setFieldValue, setFormValue }) => {
+            return <Input {...props} />;
+          }}
+        </FormItem>
+        <br />
         <FormItem
           id="birthday"
           name="birthday"
           label="Birthday"
-          required
           validations={[
             {
               message: "Value must be in the format of dd/mm/yyyy",
