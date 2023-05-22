@@ -39,6 +39,7 @@ interface IFormItem {
   label?: React.ReactNode;
   name: string;
   required?: boolean;
+  groupId?: string;
   validations?: IFormValidation[];
   onBlur?: (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
@@ -54,6 +55,7 @@ export function FormItem(props: IFormItem) {
   const {
     children,
     disabled,
+    groupId,
     helperText,
     name,
     required = false,
@@ -66,44 +68,37 @@ export function FormItem(props: IFormItem) {
 
   const {
     formData,
+    setFormError,
+    setFormGroupId,
     setFormValue,
     setFormValidation,
     triggerFieldValidation,
     getFieldError,
     getFieldValue,
-    setFormError,
   } = useContext(FormContext);
 
-  const [value, setValue] = useState<string>(get(formData, name) || "");
+  const [formItemValue, setFormItemValue] = useState<string>(
+    get(formData, name) || ""
+  );
   const [focused, setFocused] = React.useState<boolean>(false);
 
   useEffect(() => {
-    let validationToUse = [...validations];
-    if (required) {
-      validationToUse = [
-        {
-          message: "This field is required",
-          type: "required",
-        },
-        ...validationToUse,
-      ];
-    }
-    setFormValidation(name, validationToUse);
+    setFormError(name, "");
+    setFormGroupId(name, groupId);
+    setFormValidation(name, validations, required);
   }, []);
 
   const useEffectDependency = formData[name];
   useEffect(() => {
-    if (useEffectDependency !== value && !focused) {
-      useEffectDependency && setValue(useEffectDependency);
+    if (useEffectDependency !== formItemValue && !focused) {
+      useEffectDependency && setFormItemValue(useEffectDependency);
     }
+    triggerFieldValidation(name, formItemValue);
   }, [useEffectDependency]);
 
   const setFieldValue = (value: string) => {
     const validationMessage = triggerFieldValidation(name, value);
-    if (!!validationMessage) {
-      setFormError(name, validationMessage);
-    } else {
-      setFormError(name, "");
+    if (!validationMessage) {
       setFormValue(name, value);
     }
   };
@@ -118,7 +113,7 @@ export function FormItem(props: IFormItem) {
   };
 
   const formItemOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(event.target.value);
+    setFormItemValue(event.target.value);
     onChange?.(event);
   };
 
@@ -132,6 +127,8 @@ export function FormItem(props: IFormItem) {
   const errorMessage = getFieldError(name) ?? undefined;
   const error = !!errorMessage;
   const formItemHelperText = error ? errorMessage : helperText;
+  const formItemRequired =
+    required || !!validations.find((v) => v.type === "required");
 
   return children(
     {
@@ -140,8 +137,8 @@ export function FormItem(props: IFormItem) {
       error,
       helperText: formItemHelperText,
       name,
-      required,
-      value,
+      required: formItemRequired,
+      value: formItemValue,
       onBlur: formItemOnBlur,
       onChange: formItemOnChange,
       onFocus: formItemOnFocus,

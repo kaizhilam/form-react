@@ -36,9 +36,14 @@ interface IFormContext {
   getFieldError: (name: string) => string | undefined;
   getFieldValue: (name: string) => string;
   setFormError: (name: string, value: string) => void;
+  setFormGroupId: (name: string, groupId: string | undefined) => void;
   setFormValue: (name: string, value: string) => void;
-  setFormValidation: (name: string, validations: IFormValidation[]) => void;
-  triggerFieldValidation: (name: string, value: string) => string | undefined;
+  setFormValidation: (
+    name: string,
+    validations: IFormValidation[],
+    required: boolean
+  ) => void;
+  triggerFieldValidation: (name: string, value: string) => boolean;
 }
 
 export const FormContext = createContext<IFormContext>({} as IFormContext);
@@ -77,10 +82,25 @@ export function Form(props: IForm) {
   //   console.log("errors", errors);
   // }, [errors]);
 
+  const [groupIds, setGroupIds] = useState<IKeyValuePair>({});
+  useEffect(() => {
+    console.log("groupIds", groupIds);
+  }, [groupIds]);
+
+  useEffect(() => {
+    Object.keys(formValidations).forEach((name) => {
+      triggerFieldValidation(name, get(formData, name));
+    });
+  }, [data]);
+
   const formRef = useRef(null);
 
   const getFieldError = (name: string): string => {
     return errors[name];
+  };
+
+  const setFormGroupId = (name: string, groupId: string | undefined) => {
+    groupId && setGroupIds((prev) => ({ ...prev, [name]: groupId }));
   };
 
   const getFieldValue = (name: string): string => {
@@ -92,32 +112,66 @@ export function Form(props: IForm) {
   };
 
   const setFormValue = (name: string, value: string) => {
-    const toMerge = set({}, name, value);
-    setModifiedFormData((prev) => ({
-      ...prev,
-      ...merge({}, prev, toMerge),
-    }));
+    const groupId = groupIds[name];
+    if (groupId !== undefined) {
+      Object.keys(groupIds)
+        .filter((key) => groupIds[key] === groupId)
+        .forEach((val) => {
+          let toMerge: {};
+          if (name === val) {
+            toMerge = set({}, name, value);
+          } else {
+            toMerge = set({}, val, getFieldValue(val));
+          }
+          setModifiedFormData((prev) => ({
+            ...prev,
+            ...merge({}, prev, toMerge),
+          }));
+        });
+    } else {
+      const toMerge = set({}, name, value);
+      setModifiedFormData((prev) => ({
+        ...prev,
+        ...merge({}, prev, toMerge),
+      }));
+    }
   };
 
-  const setFormValidation = (name: string, validations: IFormValidation[]) => {
-    const sortedValidations = validations.sort((validation) =>
+  const setFormValidation = (
+    name: string,
+    validations: IFormValidation[],
+    required: boolean
+  ) => {
+    let validationToUse = [...validations];
+    if (required) {
+      validationToUse = [
+        {
+          message: "This field is required",
+          type: "required",
+        },
+        ...validationToUse,
+      ];
+    }
+    const sortedValidations = validationToUse.sort((validation) =>
       validation.type === "required" ? -1 : 1
     );
     setFormValidations((prev) => ({ ...prev, [name]: sortedValidations }));
   };
 
-  const triggerFieldValidation = (
-    name: string,
-    value: string
-  ): string | undefined => {
-    const validationObject = formValidations[name].find((validation) => {
+  const triggerFieldValidation = (name: string, value: string): boolean => {
+    const validationObject = formValidations?.[name]?.find((validation) => {
       if (validation.type === "required") {
         return !value;
       } else {
         return validation.expression?.(value);
       }
     });
-    return validationObject?.message;
+    if (validationObject?.message) {
+      setFormError(name, validationObject.message);
+    } else {
+      setFormError(name, "");
+    }
+    return !!validationObject?.message;
   };
 
   const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
@@ -125,8 +179,7 @@ export function Form(props: IForm) {
     event.preventDefault();
     Object.keys(formValidations).forEach((key) => {
       const validationMessage = triggerFieldValidation(key, getFieldValue(key));
-      if (!!validationMessage) {
-        setFormError(key, validationMessage);
+      if (validationMessage) {
         isValid = false;
       }
     });
@@ -139,6 +192,7 @@ export function Form(props: IForm) {
         formData,
         getFieldError,
         setFormError,
+        setFormGroupId,
         setFormValue,
         setFormValidation,
         triggerFieldValidation,

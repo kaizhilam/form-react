@@ -43,10 +43,6 @@ function App() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // setData({
-      //   ...data,
-      //   randomNumber: Math.floor(Math.random() * 100),
-      // });
       const newArr = shuffle(data.players);
       setData({ players: newArr });
     }, 3000);
@@ -60,6 +56,13 @@ function App() {
         onSubmit={({ isValid, formData, modifiedFormData }) => {
           console.log(modifiedFormData);
           console.log("isValid: ", isValid);
+          const timer = () => {
+            setTimeout(() => {
+              const newArr = shuffle(data.players);
+              setData({ players: newArr });
+            }, 1000);
+          };
+          timer();
         }}
       >
         <>
@@ -70,30 +73,24 @@ function App() {
                   id={`players.${index}.familyName`}
                   name={`players.${index}.familyName`}
                   helperText="Enter family name"
+                  label="Family name"
+                  groupId={player.uid}
+                  validations={[
+                    {
+                      message: "Error",
+                      expression: (data) => data === "Edwards",
+                    },
+                  ]}
                 >
                   {(props, { setFormValue, getFieldValue }) => {
-                    return (
-                      <TextField
-                        {...props}
-                        onBlur={(e) => {
-                          props.onBlur(e);
-                          const givenName = getFieldValue(
-                            `players.${index}.givenName`
-                          );
-                          setFormValue(`players.${index}.givenName`, givenName);
-                          const jerseyNumber = getFieldValue(
-                            `players.${index}.jerseyNumber`
-                          );
-                          setFormValue(`players.${index}.jerseyNumber`, jerseyNumber);
-                        }}
-                      />
-                    );
+                    return <TextField {...props} />;
                   }}
                 </FormItem>
                 <FormItem
                   id={`players.${index}.givenName`}
                   name={`players.${index}.givenName`}
                   helperText="Enter given name"
+                  groupId={player.uid}
                 >
                   {(props) => {
                     return <TextField {...props} />;
@@ -103,6 +100,7 @@ function App() {
                   id={`players.${index}.jerseyNumber`}
                   name={`players.${index}.jerseyNumber`}
                   helperText="Enter jersey number"
+                  groupId={player.uid}
                 >
                   {(props) => {
                     return <TextField {...props} />;
@@ -112,6 +110,16 @@ function App() {
               </React.Fragment>
             );
           })}
+          <br />
+          <FormItem
+            id={`test`}
+            name={`test`}
+            helperText="test"
+          >
+            {(props) => {
+              return <TextField {...props} />;
+            }}
+          </FormItem>
           <br />
           <FormItem id={"submit"} name={"submit"}>
             {(props) => {
