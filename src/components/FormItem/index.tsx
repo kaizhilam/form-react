@@ -88,7 +88,7 @@ export function FormItem(props: IFormItem) {
     setFormValidation(name, validations, required);
   }, []);
 
-  const useEffectDependency = formData[name];
+  const useEffectDependency = get(formData, name);
   useEffect(() => {
     if (useEffectDependency !== formItemValue && !focused) {
       useEffectDependency && setFormItemValue(useEffectDependency);
@@ -97,6 +97,7 @@ export function FormItem(props: IFormItem) {
   }, [useEffectDependency]);
 
   const setFieldValue = (value: string) => {
+    setFormItemValue(value);
     const validationMessage = triggerFieldValidation(name, value);
     if (!validationMessage) {
       setFormValue(name, value);

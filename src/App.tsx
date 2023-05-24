@@ -19,35 +19,44 @@ function shuffle(array: any[]) {
 
 function App() {
   const [data, setData] = useState({
-    players: [
+    homeTeamPlayerData: [
       {
         uid: "1",
         familyName: "Edwards",
         givenName: "Dylan",
-        jerseyNumber: 1,
+        playerTradingOpinion: {
+          jerseyNumber: 1,
+        },
       },
       {
         uid: "2",
         familyName: "Smith",
         givenName: "Chris",
-        jerseyNumber: 2,
+        playerTradingOpinion: {
+          jerseyNumber: 2,
+        },
       },
       {
         uid: "3",
         familyName: "Garner",
         givenName: "Luke",
-        jerseyNumber: 3,
+        playerTradingOpinion: {
+          jerseyNumber: 3,
+        },
       },
     ],
+    awayTeamPlayerData: [],
   });
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const newArr = shuffle(data.players);
-      setData({ players: newArr });
+      const newArr = shuffle(data.homeTeamPlayerData);
+      setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  const name = "homeTeamPlayerData";
 
   return (
     <div className="App">
@@ -58,20 +67,27 @@ function App() {
           console.log("isValid: ", isValid);
           const timer = () => {
             setTimeout(() => {
-              const newArr = shuffle(data.players);
-              setData({ players: newArr });
+              const newArr = shuffle(data.homeTeamPlayerData);
+              setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
             }, 1000);
           };
           timer();
         }}
       >
         <>
-          {data.players.map((player, index) => {
+          {data.homeTeamPlayerData.map((player, index) => {
             return (
               <React.Fragment key={player.uid}>
                 <FormItem
-                  id={`players.${index}.familyName`}
-                  name={`players.${index}.familyName`}
+                  id={`${name}.${index}.uid`}
+                  name={`${name}.${index}.uid`}
+                  groupId={player.uid}
+                >
+                  {() => <></>}
+                </FormItem>
+                <FormItem
+                  id={`${name}.${index}.familyName`}
+                  name={`${name}.${index}.familyName`}
                   helperText="Enter family name"
                   label="Family name"
                   groupId={player.uid}
@@ -87,8 +103,8 @@ function App() {
                   }}
                 </FormItem>
                 <FormItem
-                  id={`players.${index}.givenName`}
-                  name={`players.${index}.givenName`}
+                  id={`${name}.${index}.givenName`}
+                  name={`${name}.${index}.givenName`}
                   helperText="Enter given name"
                   groupId={player.uid}
                 >
@@ -97,8 +113,8 @@ function App() {
                   }}
                 </FormItem>
                 <FormItem
-                  id={`players.${index}.jerseyNumber`}
-                  name={`players.${index}.jerseyNumber`}
+                  id={`${name}.${index}.playerTradingOpinion.jerseyNumber`}
+                  name={`${name}.${index}.playerTradingOpinion.jerseyNumber`}
                   helperText="Enter jersey number"
                   groupId={player.uid}
                 >
@@ -111,11 +127,7 @@ function App() {
             );
           })}
           <br />
-          <FormItem
-            id={`test`}
-            name={`test`}
-            helperText="test"
-          >
+          <FormItem id={`test`} name={`test`} helperText="test">
             {(props) => {
               return <TextField {...props} />;
             }}

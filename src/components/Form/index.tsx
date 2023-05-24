@@ -10,6 +10,9 @@ import set from "lodash/set";
 import merge from "lodash/merge";
 import mergeWith from "lodash/mergeWith";
 import get from "lodash/get";
+import isArray from "lodash/isArray";
+import values from "lodash/values";
+import keyBy from "lodash/keyBy";
 
 interface IKeyValuePair {
   [name: string]: string;
@@ -55,6 +58,12 @@ export function Form(props: IForm) {
   const formData = useMemo(
     () =>
       mergeWith({}, data, modifiedFormData, (objValue, srcValue) => {
+        if (isArray(objValue)) {
+          const mergedArr = values(
+            merge({}, keyBy(objValue, "uid"), keyBy(srcValue, "uid"))
+          );
+          return mergedArr;
+        }
         if (srcValue === "") {
           return objValue;
         }
@@ -63,12 +72,16 @@ export function Form(props: IForm) {
     [modifiedFormData, data]
   );
   // useEffect(() => {
+  //   console.log("streamData", data);
+  // }, [data]);
+
+  // useEffect(() => {
   //   console.log("modifiedFormData", modifiedFormData);
   // }, [modifiedFormData]);
 
-  // useEffect(() => {
-  //   console.log("formData", formData);
-  // }, [formData]);
+  useEffect(() => {
+    console.log("formData", formData);
+  }, [formData]);
 
   const [formValidations, setFormValidations] = useState<{
     [key: string]: IFormValidation[];
@@ -83,9 +96,9 @@ export function Form(props: IForm) {
   // }, [errors]);
 
   const [groupIds, setGroupIds] = useState<IKeyValuePair>({});
-  useEffect(() => {
-    console.log("groupIds", groupIds);
-  }, [groupIds]);
+  // useEffect(() => {
+  //   console.log("groupIds", groupIds);
+  // }, [groupIds]);
 
   useEffect(() => {
     Object.keys(formValidations).forEach((name) => {
@@ -114,20 +127,21 @@ export function Form(props: IForm) {
   const setFormValue = (name: string, value: string) => {
     const groupId = groupIds[name];
     if (groupId !== undefined) {
-      Object.keys(groupIds)
-        .filter((key) => groupIds[key] === groupId)
-        .forEach((val) => {
-          let toMerge: {};
-          if (name === val) {
-            toMerge = set({}, name, value);
-          } else {
-            toMerge = set({}, val, getFieldValue(val));
-          }
-          setModifiedFormData((prev) => ({
-            ...prev,
-            ...merge({}, prev, toMerge),
-          }));
-        });
+      const fieldWithSameGroupIdList = Object.keys(groupIds).filter(
+        (key) => groupIds[key] === groupId
+      );
+      let toMerge = {};
+      fieldWithSameGroupIdList.forEach((val) => {
+        if (name === val) {
+          toMerge = set({ ...toMerge }, name, value);
+        } else {
+          toMerge = set({ ...toMerge }, val, getFieldValue(val));
+        }
+      });
+      setModifiedFormData((prev) => ({
+        ...prev,
+        ...merge({}, prev, toMerge),
+      }));
     } else {
       const toMerge = set({}, name, value);
       setModifiedFormData((prev) => ({
