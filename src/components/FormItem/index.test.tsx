@@ -180,7 +180,7 @@ describe("FormItem", () => {
         const element = screen.getByTestId("display");
         expect(element.textContent).toEqual("should display");
       });
-      it("SHOULD setFieldValue with groupId", () => {
+      it("SHOULD set field value with groupId", () => {
         const onSubmit = jest.fn();
         render(
           <Form
@@ -252,6 +252,56 @@ describe("FormItem", () => {
         fireEvent.click(button);
         const element = screen.getByTestId("display");
         expect(element.textContent).toEqual("should display");
+      });
+      it("SHOULD set form value with groupId", () => {
+        const onSubmit = jest.fn();
+        render(
+          <Form
+            data={{
+              test: "should change",
+              test2: "should be in modified data",
+              test3: "should not be in modified data",
+            }}
+            onSubmit={onSubmit}
+          >
+            <FormItem id="button" name="button">
+              {(props, { setFormValue }) => (
+                <button
+                  data-testid="button"
+                  onClick={() =>
+                    setFormValue("test", "should be in modified data", "same")
+                  }
+                >
+                  Click here
+                </button>
+              )}
+            </FormItem>
+            <FormItem id="test" name="test" groupId="same">
+              {() => <div>test</div>}
+            </FormItem>
+            <FormItem id="test2" name="test2" groupId="same">
+              {() => <div>test2</div>}
+            </FormItem>
+            <FormItem id="test3" name="test3" groupId="different">
+              {() => <div>test3</div>}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              submit
+            </button>
+          </Form>
+        );
+        const button = screen.getByTestId("button");
+        fireEvent.click(button);
+        const submit = screen.getByTestId("submit");
+        fireEvent.click(submit);
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            modifiedFormData: {
+              test: "should be in modified data",
+              test2: "should be in modified data",
+            },
+          })
+        );
       });
     });
   });

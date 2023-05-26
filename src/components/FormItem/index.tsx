@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { FormContext, IFormValidation } from "../Form";
+import { FormContext, IFormValidation, PrimitiveValue } from "../Form";
 import get from "lodash/get";
 
 interface IRestProps {
@@ -23,9 +23,9 @@ interface IRestProps {
 }
 
 interface IFormItemAction {
-  getFieldValue: (name: string) => string;
-  setFieldValue: (value: string) => void;
-  setFormValue: (name: string, value: string) => void;
+  getFieldValue: (name: string) => PrimitiveValue;
+  setFieldValue: (value: PrimitiveValue) => void;
+  setFormValue: (name: string, value: PrimitiveValue, groupId?: string) => void;
 }
 
 interface IFormItem {
@@ -77,7 +77,7 @@ export function FormItem(props: IFormItem) {
     getFieldValue,
   } = useContext(FormContext);
 
-  const [formItemValue, setFormItemValue] = useState<string>(
+  const [formItemValue, setFormItemValue] = useState<PrimitiveValue>(
     get(formData, name) || ""
   );
   const [focused, setFocused] = React.useState<boolean>(false);
@@ -96,7 +96,7 @@ export function FormItem(props: IFormItem) {
     triggerFieldValidation(name, formItemValue);
   }, [useEffectDependency]);
 
-  const setFieldValue = (value: string) => {
+  const setFieldValue = (value: PrimitiveValue) => {
     setFormItemValue(value);
     const validationMessage = triggerFieldValidation(name, value);
     if (!validationMessage) {
@@ -139,7 +139,7 @@ export function FormItem(props: IFormItem) {
       helperText: formItemHelperText,
       name,
       required: formItemRequired,
-      value: formItemValue,
+      value: formItemValue as string,
       onBlur: formItemOnBlur,
       onChange: formItemOnChange,
       onFocus: formItemOnFocus,

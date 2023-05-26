@@ -14,8 +14,21 @@ import isArray from "lodash/isArray";
 import values from "lodash/values";
 import keyBy from "lodash/keyBy";
 
+export type PrimitiveValue =
+  | string
+  | number
+  | bigint
+  | boolean
+  | undefined
+  | symbol
+  | null;
+
 interface IKeyValuePair {
-  [name: string]: string;
+  [name: string]: PrimitiveValue;
+}
+
+interface IKeyValuePairString {
+  [key: string]: string;
 }
 
 interface IForm {
@@ -30,23 +43,23 @@ interface IForm {
 
 export interface IFormValidation {
   message: string;
-  expression?: (data: string) => boolean;
+  expression?: (data: PrimitiveValue) => boolean;
   type?: "required";
 }
 
 interface IFormContext {
   formData: IKeyValuePair;
   getFieldError: (name: string) => string | undefined;
-  getFieldValue: (name: string) => string;
+  getFieldValue: (name: string) => PrimitiveValue;
   setFormError: (name: string, value: string) => void;
   setFormGroupId: (name: string, groupId: string | undefined) => void;
-  setFormValue: (name: string, value: string) => void;
+  setFormValue: (name: string, value: PrimitiveValue, groupId?: string) => void;
   setFormValidation: (
     name: string,
     validations: IFormValidation[],
     required: boolean
   ) => void;
-  triggerFieldValidation: (name: string, value: string) => boolean;
+  triggerFieldValidation: (name: string, value: PrimitiveValue) => boolean;
 }
 
 export const FormContext = createContext<IFormContext>({} as IFormContext);
@@ -90,12 +103,12 @@ export function Form(props: IForm) {
   //   console.log("formValidations", formValidations);
   // }, [formValidations]);
 
-  const [errors, setErrors] = useState<IKeyValuePair>({});
+  const [errors, setErrors] = useState<IKeyValuePairString>({});
   // useEffect(() => {
   //   console.log("errors", errors);
   // }, [errors]);
 
-  const [groupIds, setGroupIds] = useState<IKeyValuePair>({});
+  const [groupIds, setGroupIds] = useState<IKeyValuePairString>({});
   // useEffect(() => {
   //   console.log("groupIds", groupIds);
   // }, [groupIds]);
@@ -116,7 +129,7 @@ export function Form(props: IForm) {
     groupId && setGroupIds((prev) => ({ ...prev, [name]: groupId }));
   };
 
-  const getFieldValue = (name: string): string => {
+  const getFieldValue = (name: string): PrimitiveValue => {
     return get(formData, name);
   };
 
@@ -124,11 +137,15 @@ export function Form(props: IForm) {
     setErrors((prev) => ({ ...prev, [name]: value }));
   };
 
-  const setFormValue = (name: string, value: string) => {
-    const groupId = groupIds[name];
-    if (groupId !== undefined) {
+  const setFormValue = (
+    name: string,
+    value: PrimitiveValue,
+    groupId?: string
+  ) => {
+    const internalGroupId = groupId ?? groupIds[name];
+    if (internalGroupId !== undefined) {
       const fieldWithSameGroupIdList = Object.keys(groupIds).filter(
-        (key) => groupIds[key] === groupId
+        (key) => groupIds[key] === internalGroupId
       );
       let toMerge = {};
       fieldWithSameGroupIdList.forEach((val) => {
@@ -172,7 +189,10 @@ export function Form(props: IForm) {
     setFormValidations((prev) => ({ ...prev, [name]: sortedValidations }));
   };
 
-  const triggerFieldValidation = (name: string, value: string): boolean => {
+  const triggerFieldValidation = (
+    name: string,
+    value: PrimitiveValue
+  ): boolean => {
     const validationObject = formValidations?.[name]?.find((validation) => {
       if (validation.type === "required") {
         return !value;
