@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, SyntheticEvent } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { FormContext, IFormValidation } from "../Form";
 import get from "lodash/get";
 

@@ -1,9 +1,8 @@
 import { Form } from "..";
 import { FormItem } from ".";
 import { fireEvent, render, screen } from "@testing-library/react";
-import isUndefined from "lodash/isUndefined";
-import omitBy from "lodash/omitBy";
 import { cleanInputProps, simulateUserChange } from "../../utils/testUtils";
+import React from "react";
 
 describe("FormItem", () => {
   beforeEach(() => {
@@ -11,10 +10,10 @@ describe("FormItem", () => {
     jest.restoreAllMocks();
   });
   const onSubmit = jest.fn();
-  const renderComponent = () =>
+  const renderComponent = (props?: any) =>
     render(
       <Form onSubmit={onSubmit}>
-        <FormItem id="testId" name="testName" label="testLabel">
+        <FormItem id="input" name="testName" label="testLabel" {...props}>
           {({
             error,
             errorMessage,
@@ -33,7 +32,7 @@ describe("FormItem", () => {
                 {required && <div>Required</div>}
                 <label htmlFor={id}>{label}</label>
                 <input
-                  data-testid="testId"
+                  data-testid="input"
                   id={id}
                   name={name}
                   onBlur={onBlur}
@@ -42,7 +41,7 @@ describe("FormItem", () => {
                   value={value}
                   type={type}
                 />
-                {error && <div>{errorMessage}</div>}
+                {error && <div data-testid="error">{errorMessage}</div>}
               </>
             );
           }}
@@ -52,7 +51,7 @@ describe("FormItem", () => {
     );
   it("SHOULD render", () => {
     renderComponent();
-    const element = screen.getByTestId("testId");
+    const element = screen.getByTestId("input");
     expect(element).toBeTruthy();
   });
   describe("validations", () => {
@@ -112,6 +111,148 @@ describe("FormItem", () => {
       });
       const errorElement = screen.queryByTestId("error");
       expect(errorElement).toBeTruthy();
+    });
+  });
+  describe("events", () => {
+    it("SHOULD trigger onChange event", () => {
+      const onChange = jest.fn();
+      renderComponent({ onChange });
+      const element = screen.getByTestId("input");
+      fireEvent.change(element, { target: { value: "aaa111" } });
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+    it("SHOULD trigger onFocus event", () => {
+      const onFocus = jest.fn();
+      renderComponent({ onFocus });
+      const element = screen.getByTestId("input");
+      fireEvent.focus(element);
+      expect(onFocus).toHaveBeenCalledTimes(1);
+    });
+    it("SHOULD trigger onBlur event", () => {
+      const onBlur = jest.fn();
+      renderComponent({ onBlur });
+      const element = screen.getByTestId("input");
+      fireEvent.blur(element);
+      expect(onBlur).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe("FormItemAction", () => {
+    describe("getFieldValue", () => {
+      it("SHOULD get field value", () => {
+        render(
+          <Form data={{ data: "display" }}>
+            <FormItem id="display" name="display">
+              {(props, { getFieldValue }) => {
+                return getFieldValue("data") === "display" ? (
+                  <div data-testid="display">should display</div>
+                ) : (
+                  <div data-testid="display">should not display</div>
+                );
+              }}
+            </FormItem>
+          </Form>
+        );
+        const element = screen.getByTestId("display");
+        expect(element.textContent).toEqual("should display");
+      });
+    });
+    describe("setFieldValue", () => {
+      it("SHOULD set field value", () => {
+        render(
+          <Form data={{ test: "should not display" }}>
+            <FormItem id="test" name="test">
+              {(props, { setFieldValue }) => (
+                <>
+                  <button
+                    data-testid="button"
+                    onClick={() => setFieldValue("should display")}
+                  >
+                    Click here
+                  </button>
+                  <div data-testid="display">{props.value}</div>
+                </>
+              )}
+            </FormItem>
+          </Form>
+        );
+        const button = screen.getByTestId("button");
+        fireEvent.click(button);
+        const element = screen.getByTestId("display");
+        expect(element.textContent).toEqual("should display");
+      });
+      it("SHOULD setFieldValue with groupId", () => {
+        const onSubmit = jest.fn();
+        render(
+          <Form
+            data={{
+              test: "should change",
+              test2: "should be in modified data",
+              test3: "should not be in modified data",
+            }}
+            onSubmit={onSubmit}
+          >
+            <FormItem id="test" name="test" groupId="same">
+              {(props, { setFieldValue }) => (
+                <>
+                  <button
+                    data-testid="button"
+                    onClick={() => setFieldValue("should be in modified data")}
+                  >
+                    Click here
+                  </button>
+                  <div data-testid="display">{props.value}</div>
+                </>
+              )}
+            </FormItem>
+            <FormItem id="test2" name="test2" groupId="same">
+              {() => <div>test2</div>}
+            </FormItem>
+            <FormItem id="test3" name="test3" groupId="different">
+              {() => <div>test3</div>}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              submit
+            </button>
+          </Form>
+        );
+        const button = screen.getByTestId("button");
+        fireEvent.click(button);
+        const submit = screen.getByTestId("submit");
+        fireEvent.click(submit);
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            modifiedFormData: {
+              test: "should be in modified data",
+              test2: "should be in modified data",
+            },
+          })
+        );
+      });
+    });
+    describe("setFormValue", () => {
+      it("SHOULD set form value", () => {
+        render(
+          <Form data={{ test: "should not display" }}>
+            <FormItem id="button" name="button">
+              {(props, { setFormValue }) => (
+                <button
+                  data-testid="button"
+                  onClick={() => setFormValue("test", "should display")}
+                >
+                  Click here
+                </button>
+              )}
+            </FormItem>
+            <FormItem id="test" name="test">
+              {(props) => <div data-testid="display">{props.value}</div>}
+            </FormItem>
+          </Form>
+        );
+        const button = screen.getByTestId("button");
+        fireEvent.click(button);
+        const element = screen.getByTestId("display");
+        expect(element.textContent).toEqual("should display");
+      });
     });
   });
 });

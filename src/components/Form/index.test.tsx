@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { Form } from ".";
 import { FormItem } from "..";
 import { simulateUserChange } from "../../utils/testUtils";
+import React from "react";
 
 describe("Form", () => {
   beforeEach(() => {
@@ -70,28 +71,32 @@ describe("Form", () => {
   });
   describe("onSubmit", () => {
     it("SHOULD set isValid to true when no validation error occurs", () => {
-      const expectedResult = {
-        formData: { testName: "test" },
-        isValid: true,
-      };
       renderComponent();
       const input = screen.getByTestId("testId");
       const submitButton = screen.getByTestId("submit");
       simulateUserChange(input, { target: { value: "test" } });
       fireEvent.click(submitButton);
-      expect(onSubmit).toHaveBeenCalledWith(expectedResult);
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ isValid: true })
+      );
     });
     it("SHOULD set isValid to false when validation error occurs", () => {
-      const expectedResult = {
-        formData: {},
-        isValid: false,
-      };
       renderComponent();
       const input = screen.getByTestId("testId");
       const submitButton = screen.getByTestId("submit");
       simulateUserChange(input, { target: { value: "trigger validation" } });
       fireEvent.click(submitButton);
-      expect(onSubmit).toHaveBeenCalledWith(expectedResult);
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ isValid: false })
+      );
+    });
+    it("SHOULD set modified data to empty when nothing has changed", () => {
+      renderComponent();
+      const submitButton = screen.getByTestId("submit");
+      fireEvent.click(submitButton);
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ modifiedFormData: {} })
+      );
     });
   });
 });

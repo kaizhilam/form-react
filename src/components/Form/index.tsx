@@ -52,7 +52,7 @@ interface IFormContext {
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const { children, data = {}, onSubmit } = props;
+  const { children, data = undefined, onSubmit } = props;
 
   const [modifiedFormData, setModifiedFormData] = useState<IKeyValuePair>({});
   const formData = useMemo(
@@ -79,9 +79,9 @@ export function Form(props: IForm) {
   //   console.log("modifiedFormData", modifiedFormData);
   // }, [modifiedFormData]);
 
-  useEffect(() => {
-    console.log("formData", formData);
-  }, [formData]);
+  // useEffect(() => {
+  //   console.log("formData", formData);
+  // }, [formData]);
 
   const [formValidations, setFormValidations] = useState<{
     [key: string]: IFormValidation[];
