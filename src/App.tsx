@@ -99,8 +99,16 @@ function App() {
                       },
                     ]}
                   >
-                    {(props, { setFormValue, getFieldValue }) => {
-                      return <TextField {...props} />;
+                    {(props, { setFormValue, setFieldValue }) => {
+                      return (
+                        <TextField
+                          {...props}
+                          onBlur={(e) => {
+                            setFormValue(`${name}.${index}.test`, 99, player.uid);
+                            setFieldValue(e.target.value)
+                          }}
+                        />
+                      );
                     }}
                   </FormItem>
                   <FormItem

@@ -13,11 +13,11 @@ interface IRestProps {
   type?: string;
   value: string;
   onBlur: (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onFocus: (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
   [key: string]: any;
 }
@@ -42,11 +42,11 @@ interface IFormItem {
   groupId?: string;
   validations?: IFormValidation[];
   onBlur?: (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onFocus?: (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
   [key: string]: any;
 }
@@ -105,7 +105,7 @@ export function FormItem(props: IFormItem) {
   };
 
   const formItemOnBlur = (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => {
     setFocused(false);
     const { target } = event;
@@ -119,7 +119,7 @@ export function FormItem(props: IFormItem) {
   };
 
   const formItemOnFocus = (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => {
     setFocused(true);
     onFocus?.(event);

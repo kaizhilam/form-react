@@ -333,6 +333,53 @@ describe("FormItem", () => {
           })
         );
       });
+      it("SHOULD set form value without race condition", () => {
+        const onSubmit = jest.fn();
+        render(
+          <Form
+            data={{
+              test: "should not be this value",
+              test2: "should not be this value",
+            }}
+            onSubmit={onSubmit}
+          >
+            {() => (
+              <>
+                <FormItem id="test" name="test" groupId="same">
+                  {(props, { setFieldValue, setFormValue }) => {
+                    const inputProps = cleanInputProps(props);
+                    return (
+                      <input
+                        {...inputProps}
+                        data-testid="test"
+                        onBlur={(e) => {
+                          setFormValue("test2", "should be this value", "same");
+                          setFieldValue("should be this value");
+                        }}
+                      />
+                    );
+                  }}
+                </FormItem>
+                <button type="submit" data-testid="submit">
+                  submit
+                </button>
+              </>
+            )}
+          </Form>
+        );
+        const input = screen.getByTestId("test");
+        fireEvent.blur(input);
+        const button = screen.getByTestId("submit");
+        fireEvent.click(button);
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            modifiedFormData: {
+              test: "should be this value",
+              test2: "should be this value",
+            },
+          })
+        );
+      });
     });
   });
 });

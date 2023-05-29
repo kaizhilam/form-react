@@ -148,30 +148,29 @@ export function Form(props: IForm) {
     value: PrimitiveValue,
     groupId?: string
   ) => {
-    const internalGroupId = groupId ?? groupIds[name];
-    if (internalGroupId !== undefined) {
-      const fieldWithSameGroupIdList = Object.keys(groupIds).filter(
-        (key) => groupIds[key] === internalGroupId
-      );
-      let toMerge = {};
-      fieldWithSameGroupIdList.forEach((val) => {
-        if (name === val) {
-          toMerge = set({ ...toMerge }, name, value);
-        } else {
-          toMerge = set({ ...toMerge }, val, getFieldValue(val));
+    setModifiedFormData((prev) => {
+      const internalGroupId = groupId ?? groupIds[name];
+      if (internalGroupId !== undefined) {
+        const fieldWithSameGroupIdList = Object.keys(groupIds).filter(
+          (key) => groupIds[key] === internalGroupId
+        );
+        let toMerge = {};
+        fieldWithSameGroupIdList.forEach((val) => {
+          if (name === val) {
+            toMerge = set(toMerge, name, value);
+          } else {
+            toMerge = set(toMerge, val, get(prev, val) ?? get(formData, val));
+          }
+        });
+        if (groupId && name) {
+          toMerge = set(toMerge, name, value);
         }
-      });
-      setModifiedFormData((prev) => ({
-        ...prev,
-        ...merge({}, prev, toMerge),
-      }));
-    } else {
-      const toMerge = set({}, name, value);
-      setModifiedFormData((prev) => ({
-        ...prev,
-        ...merge({}, prev, toMerge),
-      }));
-    }
+        return merge({}, prev, toMerge);
+      } else {
+        const toMerge = set({}, name, value);
+        return merge({}, prev, toMerge);
+      }
+    });
   };
 
   const setFormValidation = (
@@ -179,17 +178,13 @@ export function Form(props: IForm) {
     validations: IFormValidation[],
     required: boolean
   ) => {
-    let validationToUse = [...validations];
     if (required) {
-      validationToUse = [
-        {
-          message: "This field is required",
-          type: "required",
-        },
-        ...validationToUse,
-      ];
+      validations.unshift({
+        message: "This field is required",
+        type: "required",
+      });
     }
-    const sortedValidations = validationToUse.sort((validation) =>
+    const sortedValidations = validations.sort((validation) =>
       validation.type === "required" ? -1 : 1
     );
     setFormValidations((prev) => ({ ...prev, [name]: sortedValidations }));
