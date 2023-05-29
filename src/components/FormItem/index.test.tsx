@@ -13,40 +13,44 @@ describe("FormItem", () => {
   const renderComponent = (props?: any) =>
     render(
       <Form onSubmit={onSubmit}>
-        <FormItem id="input" name="testName" label="testLabel" {...props}>
-          {({
-            error,
-            errorMessage,
-            id,
-            label,
-            name,
-            required,
-            type,
-            value,
-            onBlur,
-            onChange,
-            onFocus,
-          }) => {
-            return (
-              <>
-                {required && <div>Required</div>}
-                <label htmlFor={id}>{label}</label>
-                <input
-                  data-testid="input"
-                  id={id}
-                  name={name}
-                  onBlur={onBlur}
-                  onChange={onChange}
-                  onFocus={onFocus}
-                  value={value}
-                  type={type}
-                />
-                {error && <div data-testid="error">{errorMessage}</div>}
-              </>
-            );
-          }}
-        </FormItem>
-        <input type="submit" value="Submit" data-testid="submit" />
+        {() => (
+          <>
+            <FormItem id="input" name="testName" label="testLabel" {...props}>
+              {({
+                error,
+                errorMessage,
+                id,
+                label,
+                name,
+                required,
+                type,
+                value,
+                onBlur,
+                onChange,
+                onFocus,
+              }) => {
+                return (
+                  <>
+                    {required && <div>Required</div>}
+                    <label htmlFor={id}>{label}</label>
+                    <input
+                      data-testid="input"
+                      id={id}
+                      name={name}
+                      onBlur={onBlur}
+                      onChange={onChange}
+                      onFocus={onFocus}
+                      value={value}
+                      type={type}
+                    />
+                    {error && <div data-testid="error">{errorMessage}</div>}
+                  </>
+                );
+              }}
+            </FormItem>
+            <input type="submit" value="Submit" data-testid="submit" />
+          </>
+        )}
       </Form>
     );
   it("SHOULD render", () => {
@@ -58,19 +62,21 @@ describe("FormItem", () => {
     it("SHOULD setup required validation with required props", () => {
       render(
         <Form onSubmit={onSubmit}>
-          <FormItem id="testId" name="testName" required>
-            {(props, { setFieldValue, setFormValue }) => {
-              const inputProps = cleanInputProps(props);
-              return (
-                <>
-                  <input {...inputProps} data-testid="input" />
-                  {props.error && (
-                    <div data-testid="error">{props.errorMessage}</div>
-                  )}
-                </>
-              );
-            }}
-          </FormItem>
+          {() => (
+            <FormItem id="testId" name="testName" required>
+              {(props, { setFieldValue, setFormValue }) => {
+                const inputProps = cleanInputProps(props);
+                return (
+                  <>
+                    <input {...inputProps} data-testid="input" />
+                    {props.error && (
+                      <div data-testid="error">{props.errorMessage}</div>
+                    )}
+                  </>
+                );
+              }}
+            </FormItem>
+          )}
         </Form>
       );
       const inputElement = screen.getByTestId("input");
@@ -81,28 +87,30 @@ describe("FormItem", () => {
     it("SHOULD setup validation with expression", () => {
       render(
         <Form onSubmit={onSubmit}>
-          <FormItem
-            id="testId"
-            name="testName"
-            validations={[
-              {
-                message: "validation triggered",
-                expression: (data) => data === "trigger validation",
-              },
-            ]}
-          >
-            {(props, { setFieldValue, setFormValue }) => {
-              const inputProps = cleanInputProps(props);
-              return (
-                <>
-                  <input {...inputProps} data-testid="input" />
-                  {props.error && (
-                    <div data-testid="error">{props.errorMessage}</div>
-                  )}
-                </>
-              );
-            }}
-          </FormItem>
+          {() => (
+            <FormItem
+              id="testId"
+              name="testName"
+              validations={[
+                {
+                  message: "validation triggered",
+                  expression: (data) => data === "trigger validation",
+                },
+              ]}
+            >
+              {(props, { setFieldValue, setFormValue }) => {
+                const inputProps = cleanInputProps(props);
+                return (
+                  <>
+                    <input {...inputProps} data-testid="input" />
+                    {props.error && (
+                      <div data-testid="error">{props.errorMessage}</div>
+                    )}
+                  </>
+                );
+              }}
+            </FormItem>
+          )}
         </Form>
       );
       const inputElement = screen.getByTestId("input");
@@ -141,15 +149,17 @@ describe("FormItem", () => {
       it("SHOULD get field value", () => {
         render(
           <Form data={{ data: "display" }}>
-            <FormItem id="display" name="display">
-              {(props, { getFieldValue }) => {
-                return getFieldValue("data") === "display" ? (
-                  <div data-testid="display">should display</div>
-                ) : (
-                  <div data-testid="display">should not display</div>
-                );
-              }}
-            </FormItem>
+            {() => (
+              <FormItem id="display" name="display">
+                {(props, { getFieldValue }) => {
+                  return getFieldValue("data") === "display" ? (
+                    <div data-testid="display">should display</div>
+                  ) : (
+                    <div data-testid="display">should not display</div>
+                  );
+                }}
+              </FormItem>
+            )}
           </Form>
         );
         const element = screen.getByTestId("display");
@@ -160,19 +170,21 @@ describe("FormItem", () => {
       it("SHOULD set field value", () => {
         render(
           <Form data={{ test: "should not display" }}>
-            <FormItem id="test" name="test">
-              {(props, { setFieldValue }) => (
-                <>
-                  <button
-                    data-testid="button"
-                    onClick={() => setFieldValue("should display")}
-                  >
-                    Click here
-                  </button>
-                  <div data-testid="display">{props.value}</div>
-                </>
-              )}
-            </FormItem>
+            {() => (
+              <FormItem id="test" name="test">
+                {(props, { setFieldValue }) => (
+                  <>
+                    <button
+                      data-testid="button"
+                      onClick={() => setFieldValue("should display")}
+                    >
+                      Click here
+                    </button>
+                    <div data-testid="display">{props.value}</div>
+                  </>
+                )}
+              </FormItem>
+            )}
           </Form>
         );
         const button = screen.getByTestId("button");
@@ -191,28 +203,34 @@ describe("FormItem", () => {
             }}
             onSubmit={onSubmit}
           >
-            <FormItem id="test" name="test" groupId="same">
-              {(props, { setFieldValue }) => (
-                <>
-                  <button
-                    data-testid="button"
-                    onClick={() => setFieldValue("should be in modified data")}
-                  >
-                    Click here
-                  </button>
-                  <div data-testid="display">{props.value}</div>
-                </>
-              )}
-            </FormItem>
-            <FormItem id="test2" name="test2" groupId="same">
-              {() => <div>test2</div>}
-            </FormItem>
-            <FormItem id="test3" name="test3" groupId="different">
-              {() => <div>test3</div>}
-            </FormItem>
-            <button type="submit" data-testid="submit">
-              submit
-            </button>
+            {() => (
+              <>
+                <FormItem id="test" name="test" groupId="same">
+                  {(props, { setFieldValue }) => (
+                    <>
+                      <button
+                        data-testid="button"
+                        onClick={() =>
+                          setFieldValue("should be in modified data")
+                        }
+                      >
+                        Click here
+                      </button>
+                      <div data-testid="display">{props.value}</div>
+                    </>
+                  )}
+                </FormItem>
+                <FormItem id="test2" name="test2" groupId="same">
+                  {() => <div>test2</div>}
+                </FormItem>
+                <FormItem id="test3" name="test3" groupId="different">
+                  {() => <div>test3</div>}
+                </FormItem>
+                <button type="submit" data-testid="submit">
+                  submit
+                </button>
+              </>
+            )}
           </Form>
         );
         const button = screen.getByTestId("button");
@@ -233,19 +251,23 @@ describe("FormItem", () => {
       it("SHOULD set form value", () => {
         render(
           <Form data={{ test: "should not display" }}>
-            <FormItem id="button" name="button">
-              {(props, { setFormValue }) => (
-                <button
-                  data-testid="button"
-                  onClick={() => setFormValue("test", "should display")}
-                >
-                  Click here
-                </button>
-              )}
-            </FormItem>
-            <FormItem id="test" name="test">
-              {(props) => <div data-testid="display">{props.value}</div>}
-            </FormItem>
+            {() => (
+              <>
+                <FormItem id="button" name="button">
+                  {(props, { setFormValue }) => (
+                    <button
+                      data-testid="button"
+                      onClick={() => setFormValue("test", "should display")}
+                    >
+                      Click here
+                    </button>
+                  )}
+                </FormItem>
+                <FormItem id="test" name="test">
+                  {(props) => <div data-testid="display">{props.value}</div>}
+                </FormItem>
+              </>
+            )}
           </Form>
         );
         const button = screen.getByTestId("button");
@@ -264,30 +286,38 @@ describe("FormItem", () => {
             }}
             onSubmit={onSubmit}
           >
-            <FormItem id="button" name="button">
-              {(props, { setFormValue }) => (
-                <button
-                  data-testid="button"
-                  onClick={() =>
-                    setFormValue("test", "should be in modified data", "same")
-                  }
-                >
-                  Click here
+            {() => (
+              <>
+                <FormItem id="button" name="button">
+                  {(props, { setFormValue }) => (
+                    <button
+                      data-testid="button"
+                      onClick={() =>
+                        setFormValue(
+                          "test",
+                          "should be in modified data",
+                          "same"
+                        )
+                      }
+                    >
+                      Click here
+                    </button>
+                  )}
+                </FormItem>
+                <FormItem id="test" name="test" groupId="same">
+                  {() => <div>test</div>}
+                </FormItem>
+                <FormItem id="test2" name="test2" groupId="same">
+                  {() => <div>test2</div>}
+                </FormItem>
+                <FormItem id="test3" name="test3" groupId="different">
+                  {() => <div>test3</div>}
+                </FormItem>
+                <button type="submit" data-testid="submit">
+                  submit
                 </button>
-              )}
-            </FormItem>
-            <FormItem id="test" name="test" groupId="same">
-              {() => <div>test</div>}
-            </FormItem>
-            <FormItem id="test2" name="test2" groupId="same">
-              {() => <div>test2</div>}
-            </FormItem>
-            <FormItem id="test3" name="test3" groupId="different">
-              {() => <div>test3</div>}
-            </FormItem>
-            <button type="submit" data-testid="submit">
-              submit
-            </button>
+              </>
+            )}
           </Form>
         );
         const button = screen.getByTestId("button");

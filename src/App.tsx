@@ -74,71 +74,73 @@ function App() {
           timer();
         }}
       >
-        <>
-          {data.homeTeamPlayerData.map((player, index) => {
-            return (
-              <React.Fragment key={player.uid}>
-                <FormItem
-                  id={`${name}.${index}.uid`}
-                  name={`${name}.${index}.uid`}
-                  groupId={player.uid}
-                >
-                  {() => <></>}
-                </FormItem>
-                <FormItem
-                  id={`${name}.${index}.familyName`}
-                  name={`${name}.${index}.familyName`}
-                  helperText="Enter family name"
-                  label="Family name"
-                  groupId={player.uid}
-                  validations={[
-                    {
-                      message: "Error",
-                      expression: (data) => data === "Edwards",
-                    },
-                  ]}
-                >
-                  {(props, { setFormValue, getFieldValue }) => {
-                    return <TextField {...props} />;
-                  }}
-                </FormItem>
-                <FormItem
-                  id={`${name}.${index}.givenName`}
-                  name={`${name}.${index}.givenName`}
-                  helperText="Enter given name"
-                  groupId={player.uid}
-                >
-                  {(props) => {
-                    return <TextField {...props} />;
-                  }}
-                </FormItem>
-                <FormItem
-                  id={`${name}.${index}.playerTradingOpinion.jerseyNumber`}
-                  name={`${name}.${index}.playerTradingOpinion.jerseyNumber`}
-                  helperText="Enter jersey number"
-                  groupId={player.uid}
-                >
-                  {(props) => {
-                    return <TextField {...props} />;
-                  }}
-                </FormItem>
-                <br />
-              </React.Fragment>
-            );
-          })}
-          <br />
-          <FormItem id={`test`} name={`test`} helperText="test">
-            {(props) => {
-              return <TextField {...props} />;
-            }}
-          </FormItem>
-          <br />
-          <FormItem id={"submit"} name={"submit"}>
-            {(props) => {
-              return <Button type="submit">submit</Button>;
-            }}
-          </FormItem>
-        </>
+        {({ submit }) => (
+          <>
+            {data.homeTeamPlayerData.map((player, index) => {
+              return (
+                <React.Fragment key={player.uid}>
+                  <FormItem
+                    id={`${name}.${index}.uid`}
+                    name={`${name}.${index}.uid`}
+                    groupId={player.uid}
+                  >
+                    {() => <></>}
+                  </FormItem>
+                  <FormItem
+                    id={`${name}.${index}.familyName`}
+                    name={`${name}.${index}.familyName`}
+                    helperText="Enter family name"
+                    label="Family name"
+                    groupId={player.uid}
+                    validations={[
+                      {
+                        message: "Error",
+                        expression: (data) => data === "Edwards",
+                      },
+                    ]}
+                  >
+                    {(props, { setFormValue, getFieldValue }) => {
+                      return <TextField {...props} />;
+                    }}
+                  </FormItem>
+                  <FormItem
+                    id={`${name}.${index}.givenName`}
+                    name={`${name}.${index}.givenName`}
+                    helperText="Enter given name"
+                    groupId={player.uid}
+                  >
+                    {(props) => {
+                      return <TextField {...props} />;
+                    }}
+                  </FormItem>
+                  <FormItem
+                    id={`${name}.${index}.playerTradingOpinion.jerseyNumber`}
+                    name={`${name}.${index}.playerTradingOpinion.jerseyNumber`}
+                    helperText="Enter jersey number"
+                    groupId={player.uid}
+                  >
+                    {(props) => {
+                      return <TextField {...props} />;
+                    }}
+                  </FormItem>
+                  <br />
+                </React.Fragment>
+              );
+            })}
+            <br />
+            <FormItem id={`test`} name={`test`} helperText="test">
+              {(props) => {
+                return <TextField {...props} />;
+              }}
+            </FormItem>
+            <br />
+            <FormItem id={"submit"} name={"submit"}>
+              {(props) => {
+                return <Button type="submit">submit</Button>;
+              }}
+            </FormItem>
+          </>
+        )}
       </Form>
     </div>
   );

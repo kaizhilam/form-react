@@ -2,7 +2,6 @@ import React, {
   createContext,
   useState,
   useRef,
-  ReactElement,
   useMemo,
   useEffect,
 } from "react";
@@ -31,13 +30,20 @@ interface IKeyValuePairString {
   [key: string]: string;
 }
 
+interface IFormAction {
+  submit: () => void;
+}
+
 interface IForm {
-  children: ReactElement[] | ReactElement;
+  children:
+    | ((formAction: IFormAction) => JSX.Element)
+    | ((formAction: IFormAction) => JSX.Element[]);
   data?: { [name: string]: any };
   onSubmit?: (props: {
     isValid?: boolean;
     formData: IKeyValuePair;
     modifiedFormData: IKeyValuePair;
+    clearModifiedFormData: () => void;
   }) => void;
 }
 
@@ -208,16 +214,24 @@ export function Form(props: IForm) {
     return !!validationObject?.message;
   };
 
-  const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
+  const clearModifiedFormData = () => {
+    setModifiedFormData({});
+  };
+
+  const submit = () => {
     let isValid = true;
-    event.preventDefault();
     Object.keys(formValidations).forEach((key) => {
       const validationMessage = triggerFieldValidation(key, getFieldValue(key));
       if (validationMessage) {
         isValid = false;
       }
     });
-    onSubmit?.({ isValid, formData, modifiedFormData });
+    onSubmit?.({ isValid, formData, modifiedFormData, clearModifiedFormData });
+  };
+
+  const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
+    event.preventDefault();
+    submit();
   };
 
   return (
@@ -234,7 +248,7 @@ export function Form(props: IForm) {
       }}
     >
       <form ref={formRef} onSubmit={handleSubmit}>
-        {children}
+        {children({ submit })}
       </form>
     </FormContext.Provider>
   );
