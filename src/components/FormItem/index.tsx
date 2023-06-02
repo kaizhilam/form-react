@@ -4,6 +4,7 @@ import get from "lodash/get";
 
 interface IRestProps {
   disabled: boolean;
+  helperText?: React.ReactNode;
   error: boolean;
   errorMessage?: string;
   id: string;
