@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from "react";
 import { FormContext, IFormValidation, PrimitiveValue } from "../Form";
 import get from "lodash/get";
+import isEmpty from "lodash/isEmpty";
 
 interface IRestProps {
   disabled: boolean;
@@ -100,7 +101,7 @@ export function FormItem(props: IFormItem) {
   const setFieldValue = (value: PrimitiveValue) => {
     setFormItemValue(value);
     const validationMessage = triggerFieldValidation(name, value);
-    if (!validationMessage) {
+    if (!validationMessage || isEmpty(value)) {
       setFormValue(name, value);
     }
   };

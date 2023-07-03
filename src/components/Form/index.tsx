@@ -12,6 +12,7 @@ import get from "lodash/get";
 import isArray from "lodash/isArray";
 import values from "lodash/values";
 import keyBy from "lodash/keyBy";
+import { isEmpty } from "lodash";
 
 export type PrimitiveValue =
   | string
@@ -32,6 +33,8 @@ interface IKeyValuePairString {
 
 interface IFormAction {
   submit: () => void;
+  isValid: boolean;
+  formData: IKeyValuePair;
 }
 
 interface IForm {
@@ -65,7 +68,10 @@ interface IFormContext {
     validations: IFormValidation[],
     required: boolean
   ) => void;
-  triggerFieldValidation: (name: string, value: PrimitiveValue) => boolean;
+  triggerFieldValidation: (
+    name: string,
+    value: PrimitiveValue
+  ) => string | undefined;
 }
 
 export const FormContext = createContext<IFormContext>({} as IFormContext);
@@ -119,11 +125,21 @@ export function Form(props: IForm) {
   //   console.log("groupIds", groupIds);
   // }, [groupIds]);
 
+  const [isValid, setIsValid] = useState<boolean>(false);
+
   useEffect(() => {
+    let isFormValid = true;
     Object.keys(formValidations).forEach((name) => {
-      triggerFieldValidation(name, get(formData, name));
+      const fieldData = get(formData, name);
+      if (!isEmpty(fieldData)) {
+        const validationMessage = triggerFieldValidation(name, fieldData);
+        if (!!validationMessage) {
+          isFormValid = false;
+        }
+      }
     });
-  }, [data]);
+    setIsValid(isFormValid);
+  }, [formData, formValidations]);
 
   const formRef = useRef(null);
 
@@ -193,7 +209,7 @@ export function Form(props: IForm) {
   const triggerFieldValidation = (
     name: string,
     value: PrimitiveValue
-  ): boolean => {
+  ): string | undefined => {
     const validationObject = formValidations?.[name]?.find((validation) => {
       if (validation.type === "required") {
         return !value;
@@ -206,7 +222,7 @@ export function Form(props: IForm) {
     } else {
       setFormError(name, "");
     }
-    return !!validationObject?.message;
+    return validationObject?.message;
   };
 
   const clearModifiedFormData = () => {
@@ -214,14 +230,23 @@ export function Form(props: IForm) {
   };
 
   const submit = () => {
-    let isValid = true;
-    Object.keys(formValidations).forEach((key) => {
-      const validationMessage = triggerFieldValidation(key, getFieldValue(key));
-      if (validationMessage) {
-        isValid = false;
+    let isFormValid = true;
+    Object.keys(formValidations).forEach((name) => {
+      const validationMessage = triggerFieldValidation(
+        name,
+        get(formData, name)
+      );
+      if (!!validationMessage) {
+        isFormValid = false;
       }
     });
-    onSubmit?.({ isValid, formData, modifiedFormData, clearModifiedFormData });
+    setIsValid(isFormValid);
+    onSubmit?.({
+      isValid: isFormValid,
+      formData,
+      modifiedFormData,
+      clearModifiedFormData,
+    });
   };
 
   const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
@@ -243,7 +268,7 @@ export function Form(props: IForm) {
       }}
     >
       <form ref={formRef} onSubmit={handleSubmit}>
-        {children({ submit })}
+        {children({ submit, formData, isValid })}
       </form>
     </FormContext.Provider>
   );
