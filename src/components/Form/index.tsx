@@ -84,9 +84,18 @@ export function Form(props: IForm) {
     () =>
       mergeWith({}, data, modifiedFormData, (objValue, srcValue) => {
         if (isArray(objValue)) {
-          const mergedArr = values(
-            merge({}, keyBy(objValue, "uid"), keyBy(srcValue, "uid"))
-          );
+          const combinedArr = objValue.concat(srcValue);
+          const mergedArr: IKeyValuePair[] = [];
+          combinedArr.forEach((el) => {
+            if (!isEmpty(el)) {
+              const indexToAdd = mergedArr.findIndex((o) => o.uid === el.uid);
+              if (indexToAdd === -1) {
+                mergedArr.push(el);
+              } else {
+                mergedArr[indexToAdd] = el;
+              }
+            }
+          });
           return mergedArr;
         }
         if (srcValue === "") {
