@@ -48,13 +48,13 @@ function App() {
     awayTeamPlayerData: [],
   });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newArr = shuffle(data.homeTeamPlayerData);
-      setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     const newArr = shuffle(data.homeTeamPlayerData);
+  //     setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
+  //   }, 3000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const name = "homeTeamPlayerData";
 

@@ -9,10 +9,8 @@ import set from "lodash/set";
 import merge from "lodash/merge";
 import mergeWith from "lodash/mergeWith";
 import get from "lodash/get";
-import isArray from "lodash/isArray";
-import values from "lodash/values";
-import keyBy from "lodash/keyBy";
-import { isEmpty } from "lodash";
+import isEmpty from "lodash/isEmpty";
+import { mergeFunction } from "./utils";
 
 export type PrimitiveValue =
   | string
@@ -38,6 +36,7 @@ interface IFormAction {
 }
 
 interface IForm {
+  arrayMergeKeys?: string[];
   children:
     | ((formAction: IFormAction) => JSX.Element)
     | ((formAction: IFormAction) => JSX.Element[]);
@@ -77,32 +76,11 @@ interface IFormContext {
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const { children, data = undefined, onSubmit } = props;
+  const { arrayMergeKeys, children, data = undefined, onSubmit } = props;
 
   const [modifiedFormData, setModifiedFormData] = useState<IKeyValuePair>({});
   const formData = useMemo(
-    () =>
-      mergeWith({}, data, modifiedFormData, (objValue, srcValue) => {
-        if (isArray(objValue)) {
-          const combinedArr = objValue.concat(srcValue);
-          const mergedArr: IKeyValuePair[] = [];
-          combinedArr.forEach((el) => {
-            if (!isEmpty(el)) {
-              const indexToAdd = mergedArr.findIndex((o) => o.uid === el.uid);
-              if (indexToAdd === -1) {
-                mergedArr.push(el);
-              } else {
-                mergedArr[indexToAdd] = el;
-              }
-            }
-          });
-          return mergedArr;
-        }
-        if (srcValue === "") {
-          return objValue;
-        }
-        return srcValue;
-      }),
+    () => mergeWith({}, data, modifiedFormData, mergeFunction(arrayMergeKeys)),
     [modifiedFormData, data]
   );
   // useEffect(() => {
