@@ -1,5 +1,14 @@
 import mergeWith from "lodash/mergeWith";
 import isArray from "lodash/isArray";
+import get from "lodash/get";
+import merge from "lodash/merge";
+import set from "lodash/set";
+import {
+  IKeyValuePair,
+  IKeyValuePairString,
+  IReducerAction,
+  ReducerAction,
+} from ".";
 
 export const mergeFunction = (arrayMergeKeys = ["uid"]) => {
   return (objValue: any, srcValue: any, key: string, obj: {}, src: {}) => {
@@ -31,5 +40,33 @@ export const mergeFunction = (arrayMergeKeys = ["uid"]) => {
       return allArr;
     }
     return srcValue;
+  };
+};
+
+export const reducerFunction = (
+  data: IKeyValuePair | undefined = {},
+  groupIds: IKeyValuePairString
+) => {
+  return (state: IKeyValuePair, action: IReducerAction) => {
+    const { type, payload } = action;
+    const { name, value, groupId } = payload;
+    let toMerge = {};
+    switch (type) {
+      case ReducerAction.SET:
+        set(toMerge, name, value);
+        return merge({}, state, toMerge);
+      case ReducerAction.SET_WITH_GROUP_ID:
+        Object.keys(groupIds).forEach((key) => {
+          if (groupIds[key] === groupId && key !== name) {
+            set(toMerge, key, get(state, key) ?? get(data, key));
+          }
+        });
+        set(toMerge, name, value);
+        return merge({}, state, toMerge);
+      case ReducerAction.CLEAR:
+        return {};
+      default:
+        return state;
+    }
   };
 };

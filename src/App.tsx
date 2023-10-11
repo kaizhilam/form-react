@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Form, FormItem } from "./components";
 import { Regex } from "./utils/regex";
 import { Button, TextField } from "@mui/material";
+import { merge, set } from "lodash";
 
 function shuffle(array: any[]) {
   let currentIndex = array.length,
@@ -18,6 +19,8 @@ function shuffle(array: any[]) {
 }
 
 function App() {
+  const [shuffleTime, setShuffleTime] = useState<number>(0);
+  const [populateTime, setPopulateTime] = useState<number>(1000);
   const [data, setData] = useState({
     homeTeamPlayerData: [
       {
@@ -48,30 +51,24 @@ function App() {
     awayTeamPlayerData: [],
   });
 
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     const newArr = shuffle(data.homeTeamPlayerData);
-  //     setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
-  //   }, 3000);
-  //   return () => clearInterval(interval);
-  // }, []);
-
   const name = "homeTeamPlayerData";
 
   return (
     <div className="App">
       <Form
         data={data}
-        onSubmit={({ isValid, formData, modifiedFormData }) => {
+        onSubmit={({
+          isValid,
+          formData,
+          modifiedFormData,
+          clearModifiedFormData,
+        }) => {
           console.log(modifiedFormData);
+          console.log(formData);
           console.log("isValid: ", isValid);
-          const timer = () => {
-            setTimeout(() => {
-              const newArr = shuffle(data.homeTeamPlayerData);
-              setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
-            }, 1000);
-          };
-          timer();
+          if (isValid) {
+            clearModifiedFormData();
+          }
         }}
       >
         {({ submit }) => (
@@ -94,8 +91,12 @@ function App() {
                     groupId={player.uid}
                     validations={[
                       {
-                        message: "Error",
+                        message: "Error Edwards",
                         expression: (data) => data === "Edwards",
+                      },
+                      {
+                        message: "ErrorAAA",
+                        expression: (data) => data === "aaa",
                       },
                     ]}
                   >
@@ -104,8 +105,12 @@ function App() {
                         <TextField
                           {...props}
                           onBlur={(e) => {
-                            setFormValue(`${name}.${index}.test`, 99, player.uid);
-                            setFieldValue(e.target.value)
+                            setFormValue(
+                              `${name}.${index}.test`,
+                              99,
+                              player.uid
+                            );
+                            setFieldValue(e.target.value);
                           }}
                         />
                       );
@@ -117,8 +122,20 @@ function App() {
                     helperText="Enter given name"
                     groupId={player.uid}
                   >
-                    {(props) => {
-                      return <TextField {...props} />;
+                    {(props, { setFormValue }) => {
+                      return (
+                        <TextField
+                          {...props}
+                          onBlur={(e) => {
+                            props.onBlur(e);
+                            setFormValue(
+                              `${name}.${index}.familyName`,
+                              "aaa",
+                              player.uid
+                            );
+                          }}
+                        />
+                      );
                     }}
                   </FormItem>
                   <FormItem
@@ -127,8 +144,20 @@ function App() {
                     helperText="Enter jersey number"
                     groupId={player.uid}
                   >
-                    {(props) => {
-                      return <TextField {...props} />;
+                    {(props, { setFormValue }) => {
+                      return (
+                        <TextField
+                          {...props}
+                          onBlur={(e) => {
+                            props.onBlur(e);
+                            setFormValue(
+                              `${name}.${index}.familyName`,
+                              "no error",
+                              player.uid
+                            );
+                          }}
+                        />
+                      );
                     }}
                   </FormItem>
                   <br />
@@ -150,6 +179,58 @@ function App() {
           </>
         )}
       </Form>
+      <br />
+      <TextField
+        label="Shuffle time (ms)"
+        onChange={(e) => {
+          const number = parseInt(e.target.value);
+          if (!Number.isNaN(number)) {
+            setShuffleTime(number);
+          }
+        }}
+        value={shuffleTime}
+      />
+      <Button
+        onClick={(e) => {
+          const timer = () => {
+            setTimeout(() => {
+              const newArr = shuffle(data.homeTeamPlayerData);
+              setData((prev) => ({ ...prev, homeTeamPlayerData: newArr }));
+              console.log("shuffled");
+            }, shuffleTime);
+          };
+          timer();
+        }}
+      >
+        Shuffle
+      </Button>
+      <br />
+      <TextField
+        label="Populate time (ms)"
+        onChange={(e) => {
+          const number = parseInt(e.target.value);
+          if (!Number.isNaN(number)) {
+            setPopulateTime(number);
+          }
+        }}
+        value={populateTime}
+      />
+      <Button
+        onClick={(e) => {
+          const timer = () => {
+            setTimeout(() => {
+              const toMerge = {};
+              set(toMerge, `${name}.${0}.familyName`, "test");
+              const newData = merge({}, data, toMerge);
+              setData(newData);
+              console.log("populated");
+            }, populateTime);
+          };
+          timer();
+        }}
+      >
+        Populate
+      </Button>
     </div>
   );
 }

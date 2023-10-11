@@ -1,5 +1,6 @@
 import mergeWith from "lodash/mergeWith";
-import { mergeFunction } from "./utils";
+import { mergeFunction, reducerFunction } from "./utils";
+import { ReducerAction } from ".";
 
 describe("utils", () => {
   describe("mergeFunction", () => {
@@ -148,6 +149,113 @@ describe("utils", () => {
             { qwe: 4, ddd: 444 },
           ],
         });
+      });
+    });
+  });
+  describe("reducerFunction", () => {
+    const defaultReducer = reducerFunction({}, {});
+    let result = {};
+    beforeEach(() => {
+      result = {};
+    });
+    describe("set", () => {
+      it("SHOULD set data", () => {
+        result = defaultReducer(
+          {},
+          {
+            type: ReducerAction.SET,
+            payload: { name: "testKey", value: "testValue" },
+          }
+        );
+        expect(result).toEqual({ testKey: "testValue" });
+      });
+      it("SHOULD add data", () => {
+        result = defaultReducer(
+          { aaa: "111" },
+          {
+            type: ReducerAction.SET,
+            payload: { name: "testKey", value: "testValue" },
+          }
+        );
+        expect(result).toEqual({ testKey: "testValue", aaa: "111" });
+      });
+      it("SHOULD replace data", () => {
+        result = defaultReducer(
+          { testKey: "should be replaced" },
+          {
+            type: ReducerAction.SET,
+            payload: { name: "testKey", value: "replaced value" },
+          }
+        );
+        expect(result).toEqual({ testKey: "replaced value" });
+      });
+    });
+    describe("set with group id", () => {
+      it("SHOULD set data with group id", () => {
+        const groupIdReducer = reducerFunction(
+          {
+            // @ts-ignore
+            arr: [
+              {
+                uid: "1",
+                familyName: "Edwards",
+                givenName: "Dylan",
+              },
+              {
+                uid: "2",
+                familyName: "Smith",
+                givenName: "Chris",
+                playerTradingOpinion: {
+                  jerseyNumber: 2,
+                },
+              },
+            ],
+          },
+          {
+            "arr.0.uid": "1",
+            "arr.0.familyName": "1",
+            "arr.0.givenName": "1",
+            "arr.1.uid": "2",
+            "arr.1.familyName": "2",
+            "arr.1.givenName": "2",
+          }
+        );
+        result = groupIdReducer(
+          {},
+          {
+            type: ReducerAction.SET_WITH_GROUP_ID,
+            payload: {
+              name: "arr.0.familyName",
+              value: "Test",
+              groupId: "1",
+            },
+          }
+        );
+        expect(result).toEqual({
+          arr: [
+            {
+              familyName: "Test",
+              givenName: "Dylan",
+              uid: "1",
+            },
+          ],
+        });
+      });
+    });
+    describe("clear", () => {
+      it("SHOULD clear data", () => {
+        result = defaultReducer(
+          {},
+          { type: ReducerAction.CLEAR, payload: { name: "", value: "" } }
+        );
+        expect(result).toEqual({});
+      });
+      it("SHOULD clear data even when data exist", () => {
+        result = reducerFunction({ test: "test" }, {})(
+          {},
+          { type: ReducerAction.CLEAR, payload: { name: "", value: "" } }
+        );
+        expect(result).toEqual({});
       });
     });
   });

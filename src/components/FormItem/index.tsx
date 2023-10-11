@@ -1,7 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import { FormContext, IFormValidation, PrimitiveValue } from "../Form";
 import get from "lodash/get";
-import isEmpty from "lodash/isEmpty";
 
 interface IRestProps {
   disabled: boolean;
@@ -92,26 +91,25 @@ export function FormItem(props: IFormItem) {
 
   const useEffectDependency = get(formData, name);
   useEffect(() => {
-    if (useEffectDependency !== formItemValue && !focused) {
+    if (useEffectDependency !== formItemValue) {
       useEffectDependency && setFormItemValue(useEffectDependency);
     }
-    triggerFieldValidation(name, formItemValue);
   }, [useEffectDependency]);
 
   const setFieldValue = (value: PrimitiveValue) => {
     setFormItemValue(value);
-    const validationMessage = triggerFieldValidation(name, value);
-    if (!validationMessage || isEmpty(value)) {
-      setFormValue(name, value);
-    }
+    setFormValue(name, value);
   };
 
   const formItemOnBlur = (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => {
-    setFocused(false);
     const { target } = event;
-    if (target) setFieldValue((target as HTMLInputElement).value);
+    if (target) {
+      setFieldValue((target as HTMLInputElement).value);
+      triggerFieldValidation(name, (target as HTMLInputElement).value);
+    }
+    setFocused(false);
     onBlur?.(event);
   };
 
@@ -125,6 +123,20 @@ export function FormItem(props: IFormItem) {
   ) => {
     setFocused(true);
     onFocus?.(event);
+  };
+
+  const formItemSetFormValue = (
+    name: string,
+    value: PrimitiveValue,
+    groupId?: string
+  ) => {
+    setFormValue(name, value, groupId);
+    triggerFieldValidation(name, value);
+  };
+
+  const formItemSetFieldValue = (value: PrimitiveValue) => {
+    setFieldValue(value);
+    triggerFieldValidation(name, value);
   };
 
   const errorMessage = getFieldError(name) ?? undefined;
@@ -148,8 +160,8 @@ export function FormItem(props: IFormItem) {
     },
     {
       getFieldValue,
-      setFieldValue,
-      setFormValue,
+      setFieldValue: formItemSetFieldValue,
+      setFormValue: formItemSetFormValue,
     }
   );
 }

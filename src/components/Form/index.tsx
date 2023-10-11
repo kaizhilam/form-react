@@ -4,13 +4,11 @@ import React, {
   useRef,
   useMemo,
   useEffect,
+  useReducer,
 } from "react";
-import set from "lodash/set";
-import merge from "lodash/merge";
 import mergeWith from "lodash/mergeWith";
 import get from "lodash/get";
-import isEmpty from "lodash/isEmpty";
-import { mergeFunction } from "./utils";
+import { mergeFunction, reducerFunction } from "./utils";
 
 export type PrimitiveValue =
   | string
@@ -21,18 +19,19 @@ export type PrimitiveValue =
   | symbol
   | null;
 
-interface IKeyValuePair {
+export interface IKeyValuePair {
   [name: string]: PrimitiveValue;
 }
 
-interface IKeyValuePairString {
+export interface IKeyValuePairString {
   [key: string]: string;
 }
 
 interface IFormAction {
-  submit: () => void;
-  isValid: boolean;
   formData: IKeyValuePair;
+  isValid: boolean;
+  modifiedFormData: IKeyValuePair;
+  submit: () => void;
 }
 
 interface IForm {
@@ -42,8 +41,8 @@ interface IForm {
     | ((formAction: IFormAction) => JSX.Element[]);
   data?: { [name: string]: any };
   onSubmit?: (props: {
-    isValid?: boolean;
     formData: IKeyValuePair;
+    isValid?: boolean;
     modifiedFormData: IKeyValuePair;
     clearModifiedFormData: () => void;
   }) => void;
@@ -73,27 +72,30 @@ interface IFormContext {
   ) => string | undefined;
 }
 
+export enum ReducerAction {
+  CLEAR = "CLEAR",
+  SET = "SET",
+  SET_WITH_GROUP_ID = "SET_WITH_GROUP_ID",
+}
+
+interface IReducerPayload {
+  groupId?: string;
+  name: string;
+  value: PrimitiveValue;
+}
+
+export interface IReducerAction {
+  payload: IReducerPayload;
+  type: ReducerAction;
+}
+
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
   const { arrayMergeKeys, children, data = undefined, onSubmit } = props;
-
-  const [modifiedFormData, setModifiedFormData] = useState<IKeyValuePair>({});
-  const formData = useMemo(
-    () => mergeWith({}, data, modifiedFormData, mergeFunction(arrayMergeKeys)),
-    [modifiedFormData, data]
-  );
   // useEffect(() => {
   //   console.log("streamData", data);
   // }, [data]);
-
-  // useEffect(() => {
-  //   console.log("modifiedFormData", modifiedFormData);
-  // }, [modifiedFormData]);
-
-  // useEffect(() => {
-  //   console.log("formData", formData);
-  // }, [formData]);
 
   const [formValidations, setFormValidations] = useState<{
     [key: string]: IFormValidation[];
@@ -114,19 +116,30 @@ export function Form(props: IForm) {
 
   const [isValid, setIsValid] = useState<boolean>(false);
 
+  const [modifiedFormData, dispatch] = useReducer(
+    reducerFunction(data, groupIds),
+    {}
+  );
+
+  const formData = useMemo(() => {
+    return mergeWith({}, data, modifiedFormData, mergeFunction(arrayMergeKeys));
+  }, [modifiedFormData, data]);
+
+  // useEffect(() => {
+  //   console.log("formData", formData);
+  // }, [formData]);
+
   useEffect(() => {
     let isFormValid = true;
     Object.keys(formValidations).forEach((name) => {
       const fieldData = get(formData, name);
-      if (!isEmpty(fieldData)) {
-        const validationMessage = triggerFieldValidation(name, fieldData);
-        if (!!validationMessage) {
-          isFormValid = false;
-        }
+      const validationMessage = triggerFieldValidation(name, fieldData);
+      if (validationMessage) {
+        isFormValid = false;
       }
     });
     setIsValid(isFormValid);
-  }, [formData, formValidations]);
+  }, [formData]);
 
   const formRef = useRef(null);
 
@@ -151,29 +164,15 @@ export function Form(props: IForm) {
     value: PrimitiveValue,
     groupId?: string
   ) => {
-    setModifiedFormData((prev) => {
-      const internalGroupId = groupId ?? groupIds[name];
-      if (internalGroupId !== undefined) {
-        const fieldWithSameGroupIdList = Object.keys(groupIds).filter(
-          (key) => groupIds[key] === internalGroupId
-        );
-        let toMerge = {};
-        fieldWithSameGroupIdList.forEach((val) => {
-          if (name === val) {
-            toMerge = set(toMerge, name, value);
-          } else {
-            toMerge = set(toMerge, val, get(prev, val) ?? get(formData, val));
-          }
-        });
-        if (groupId && name) {
-          toMerge = set(toMerge, name, value);
-        }
-        return merge({}, prev, toMerge);
-      } else {
-        const toMerge = set({}, name, value);
-        return merge({}, prev, toMerge);
-      }
-    });
+    const internalGroupId = groupId ?? groupIds[name];
+    if (!!internalGroupId) {
+      dispatch({
+        type: ReducerAction.SET_WITH_GROUP_ID,
+        payload: { groupId: internalGroupId, name, value },
+      });
+    } else {
+      dispatch({ type: ReducerAction.SET, payload: { name, value } });
+    }
   };
 
   const setFormValidation = (
@@ -213,7 +212,7 @@ export function Form(props: IForm) {
   };
 
   const clearModifiedFormData = () => {
-    setModifiedFormData({});
+    dispatch({ type: ReducerAction.CLEAR, payload: { name: "", value: "" } });
   };
 
   const submit = () => {
@@ -255,7 +254,7 @@ export function Form(props: IForm) {
       }}
     >
       <form ref={formRef} onSubmit={handleSubmit}>
-        {children({ submit, formData, isValid })}
+        {children({ submit, formData, isValid, modifiedFormData })}
       </form>
     </FormContext.Provider>
   );
