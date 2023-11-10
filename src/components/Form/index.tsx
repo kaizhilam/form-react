@@ -8,6 +8,8 @@ import React, {
 } from "react";
 import mergeWith from "lodash/mergeWith";
 import get from "lodash/get";
+import set from "lodash/set";
+import merge from "lodash/merge";
 import { mergeFunction, reducerFunction } from "./utils";
 
 export type PrimitiveValue =
@@ -58,6 +60,10 @@ interface IFormContext {
   formData: IKeyValuePair;
   getFieldError: (name: string) => string | undefined;
   getFieldValue: (name: string) => PrimitiveValue;
+  mostRecentFieldFocus: React.MutableRefObject<{
+    name: string;
+    value: PrimitiveValue;
+  }>;
   setFormError: (name: string, value: string) => void;
   setFormGroupId: (name: string, groupId: string | undefined) => void;
   setFormValue: (name: string, value: PrimitiveValue, groupId?: string) => void;
@@ -143,6 +149,8 @@ export function Form(props: IForm) {
 
   const formRef = useRef(null);
 
+  const mostRecentFieldFocus = useRef({ name: "", value: undefined });
+
   const getFieldError = (name: string): string => {
     return errors[name];
   };
@@ -218,19 +226,45 @@ export function Form(props: IForm) {
   const submit = () => {
     let isFormValid = true;
     Object.keys(formValidations).forEach((name) => {
-      const validationMessage = triggerFieldValidation(
-        name,
-        get(formData, name)
-      );
-      if (!!validationMessage) {
-        isFormValid = false;
+      if (name !== mostRecentFieldFocus.current.name) {
+        const validationMessage = triggerFieldValidation(
+          name,
+          get(formData, name)
+        );
+        if (!!validationMessage) {
+          isFormValid = false;
+        }
       }
     });
+    if (mostRecentFieldFocus.current.name !== "") {
+      setFormValue(
+        mostRecentFieldFocus.current.name,
+        mostRecentFieldFocus.current.value
+      );
+      const validationMessage = triggerFieldValidation(
+        mostRecentFieldFocus.current.name,
+        mostRecentFieldFocus.current.value
+      );
+      if (validationMessage) {
+        isFormValid = false;
+      }
+    }
+    const mostRecentFieldData = set(
+      {},
+      mostRecentFieldFocus.current.name,
+      mostRecentFieldFocus.current.value
+    );
+    const modifiedFormDataToSubmit = merge(
+      {},
+      modifiedFormData,
+      mostRecentFieldData
+    );
+    const formDataToSubmit = merge({}, formData, mostRecentFieldData);
     setIsValid(isFormValid);
     onSubmit?.({
       isValid: isFormValid,
-      formData,
-      modifiedFormData,
+      formData: formDataToSubmit,
+      modifiedFormData: modifiedFormDataToSubmit,
       clearModifiedFormData,
     });
   };
@@ -245,12 +279,13 @@ export function Form(props: IForm) {
       value={{
         formData,
         getFieldError,
+        getFieldValue,
+        mostRecentFieldFocus,
         setFormError,
         setFormGroupId,
         setFormValue,
         setFormValidation,
         triggerFieldValidation,
-        getFieldValue,
       }}
     >
       <form ref={formRef} onSubmit={handleSubmit}>

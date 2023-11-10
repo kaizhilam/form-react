@@ -208,7 +208,36 @@ describe("Form", () => {
         simulateUserChange(input, { target: { value: "test" } });
         fireEvent.click(submitButton);
         expect(onSubmit).toHaveBeenCalledWith(
-          expect.objectContaining({ formData: { testName: "test" }, isValid: true })
+          expect.objectContaining({
+            formData: { testName: "test" },
+            isValid: true,
+          })
+        );
+      });
+      it("SHOULD show most up to date data if user does not blur", () => {
+        renderComponent();
+        const input = screen.getByTestId("testId");
+        const submitButton = screen.getByTestId("submit");
+        fireEvent.focus(input);
+        fireEvent.change(input, {
+          target: { value: "do not trigger validation" },
+        });
+        fireEvent.click(submitButton);
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ isValid: true })
+        );
+      });
+      it("SHOULD show most up to date data and trigger validation if user does not blur", () => {
+        renderComponent();
+        const input = screen.getByTestId("testId");
+        const submitButton = screen.getByTestId("submit");
+        fireEvent.focus(input);
+        fireEvent.change(input, {
+          target: { value: "trigger validation" },
+        });
+        fireEvent.click(submitButton);
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ isValid: false })
         );
       });
     });

@@ -69,19 +69,19 @@ export function FormItem(props: IFormItem) {
 
   const {
     formData,
+    getFieldError,
+    getFieldValue,
+    mostRecentFieldFocus,
     setFormError,
     setFormGroupId,
     setFormValue,
     setFormValidation,
     triggerFieldValidation,
-    getFieldError,
-    getFieldValue,
   } = useContext(FormContext);
 
   const [formItemValue, setFormItemValue] = useState<PrimitiveValue>(
     get(formData, name) || ""
   );
-  const [focused, setFocused] = React.useState<boolean>(false);
 
   useEffect(() => {
     setFormError(name, "");
@@ -109,19 +109,20 @@ export function FormItem(props: IFormItem) {
       setFieldValue((target as HTMLInputElement).value);
       triggerFieldValidation(name, (target as HTMLInputElement).value);
     }
-    setFocused(false);
+    mostRecentFieldFocus.current = { name: "", value: undefined };
     onBlur?.(event);
   };
 
   const formItemOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormItemValue(event.target.value);
+    mostRecentFieldFocus.current = { name, value: event.target.value };
     onChange?.(event);
   };
 
   const formItemOnFocus = (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => {
-    setFocused(true);
+    mostRecentFieldFocus.current = { name, value: formItemValue };
     onFocus?.(event);
   };
 
