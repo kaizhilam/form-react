@@ -1,104 +1,150 @@
-import React, { useState, useContext, useEffect } from "react";
-import { FormContext, IFormValidation, PrimitiveValue } from "../Form";
+import React, {
+  useState,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
+import {
+  Data,
+  FieldValue,
+  FormContext,
+  IFormValidation,
+  PrimitiveValue,
+} from "../Form";
 import get from "lodash/get";
+import { isEmpty } from "lodash";
 
 interface IRestProps {
   disabled: boolean;
-  helperText?: React.ReactNode;
   error: boolean;
   errorMessage?: string;
+  helperText?: React.ReactNode;
   id: string;
   label?: React.ReactNode;
   name: string;
-  required: boolean;
-  type?: string;
-  value: string;
   onBlur: (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
   onFocus: (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
+  required: boolean;
+  value: string;
   [key: string]: any;
 }
 
-interface IFormItemAction {
-  getFieldValue: (name: string) => PrimitiveValue;
+interface IFieldAction {
+  formData: Data;
+  getFieldValue: (name: string) => FieldValue | Data | Data[];
   setFieldValue: (value: PrimitiveValue) => void;
   setFormValue: (name: string, value: PrimitiveValue, groupId?: string) => void;
 }
 
 interface IFormItem {
+  disabled?:
+    | boolean
+    | (({
+        formData,
+        getFieldValue,
+      }: {
+        formData: Data;
+        getFieldValue: (name: string) => FieldValue | Data | Data[];
+      }) => boolean);
   children: (
     formElementProps: IRestProps,
-    formItemAction: IFormItemAction
+    formItemAction: IFieldAction
   ) => JSX.Element;
-  disabled?: boolean;
+  groupId?: string;
   helperText?: React.ReactNode;
   id: string;
   label?: React.ReactNode;
   name: string;
-  required?: boolean;
-  groupId?: string;
-  validations?: IFormValidation[];
+  noOptimise?: boolean;
   onBlur?: (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
   onFocus?: (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => void;
+  required?: boolean;
+  validations?: IFormValidation[];
   [key: string]: any;
 }
 
 export function FormItem(props: IFormItem) {
   const {
-    children,
     disabled,
+    children,
     groupId,
     helperText,
     name,
-    required = false,
-    validations = [],
+    noOptimise = false,
     onBlur,
     onChange,
     onFocus,
+    required = false,
+    validations = [],
     ...restProps
   } = props;
 
   const {
+    errors,
     formData,
-    getFieldError,
-    getFieldValue,
-    mostRecentFieldFocus,
-    setFormError,
-    setFormGroupId,
+    groupIds,
     setFormValue,
-    setFormValidation,
     triggerFieldValidation,
+    validations: formValidations,
   } = useContext(FormContext);
 
-  const [formItemValue, setFormItemValue] = useState<PrimitiveValue>(
-    get(formData, name) || ""
-  );
-
   useEffect(() => {
-    setFormError(name, "");
-    setFormGroupId(name, groupId);
-    setFormValidation(name, validations, required);
+    if (groupId) {
+      groupIds.current = { ...groupIds.current, [name]: groupId };
+    }
+
+    const validationToAdd: IFormValidation[] = [...validations];
+    if (required) {
+      validationToAdd.unshift({
+        message: "This field is required",
+        type: "required",
+      });
+    }
+    const sortedValidations = validationToAdd.sort((validation) =>
+      validation.type === "required" ? -1 : 1
+    );
+    if (!isEmpty(sortedValidations)) {
+      formValidations.current = {
+        ...formValidations.current,
+        [name]: sortedValidations,
+      };
+    }
   }, []);
 
-  const useEffectDependency = get(formData, name);
+  const [formItemValue, setFormItemValue] = useState<PrimitiveValue>(
+    (get(formData, name) as PrimitiveValue) || ""
+  );
+
+  const useEffectDependency = get(formData, name) as PrimitiveValue;
   useEffect(() => {
     if (useEffectDependency !== formItemValue) {
-      useEffectDependency && setFormItemValue(useEffectDependency);
+      setFormItemValue(useEffectDependency || "");
+      triggerFieldValidation(name, useEffectDependency);
     }
   }, [useEffectDependency]);
+
+  const getFieldValue = (fieldName: string): FieldValue | Data | Data[] => {
+    return get(formData, fieldName);
+  };
 
   const setFieldValue = (value: PrimitiveValue) => {
     setFormItemValue(value);
     setFormValue(name, value);
+    triggerFieldValidation(name, value);
   };
 
   const formItemOnBlur = (
@@ -107,62 +153,92 @@ export function FormItem(props: IFormItem) {
     const { target } = event;
     if (target) {
       setFieldValue((target as HTMLInputElement).value);
-      triggerFieldValidation(name, (target as HTMLInputElement).value);
     }
-    mostRecentFieldFocus.current = { name: "", value: undefined };
     onBlur?.(event);
   };
 
-  const formItemOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const formItemOnChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormItemValue(event.target.value);
-    mostRecentFieldFocus.current = { name, value: event.target.value };
     onChange?.(event);
   };
 
   const formItemOnFocus = (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | Element>
   ) => {
-    mostRecentFieldFocus.current = { name, value: formItemValue };
     onFocus?.(event);
   };
 
-  const formItemSetFormValue = (
-    name: string,
-    value: PrimitiveValue,
-    groupId?: string
-  ) => {
-    setFormValue(name, value, groupId);
-    triggerFieldValidation(name, value);
-  };
-
-  const formItemSetFieldValue = (value: PrimitiveValue) => {
-    setFieldValue(value);
-    triggerFieldValidation(name, value);
-  };
-
-  const errorMessage = getFieldError(name) ?? undefined;
-  const error = !!errorMessage;
-  const formItemHelperText = error ? errorMessage : helperText;
+  const errorMessage = get(errors.current, name);
+  const formItemDisabled = ((): boolean => {
+    if (typeof disabled === "boolean" || disabled === undefined) {
+      return !!disabled;
+    } else {
+      return disabled({ formData, getFieldValue });
+    }
+  })();
   const formItemRequired =
     required || !!validations.find((v) => v.type === "required");
 
-  return children(
-    {
-      ...restProps,
-      disabled: !!disabled,
-      error,
-      helperText: formItemHelperText,
-      name,
-      required: formItemRequired,
-      value: formItemValue as string,
-      onBlur: formItemOnBlur,
-      onChange: formItemOnChange,
-      onFocus: formItemOnFocus,
+  const [formDataAccessed, setFormDataAccessed] = useState<boolean>(false);
+  const fieldAction: IFieldAction = {
+    get formData() {
+      setFormDataAccessed(true);
+      return formData;
     },
-    {
-      getFieldValue,
-      setFieldValue: formItemSetFieldValue,
-      setFormValue: formItemSetFormValue,
-    }
-  );
+    getFieldValue: (fieldName: string): FieldValue | Data | Data[] => {
+      setFormDataAccessed(true);
+      return getFieldValue(fieldName);
+    },
+    setFieldValue,
+    setFormValue,
+  };
+
+  const toRender = useMemo(() => {
+    if (noOptimise) return <></>;
+    return children(
+      {
+        ...restProps,
+        disabled: !!disabled,
+        error: !!errorMessage,
+        helperText: errorMessage ?? helperText,
+        name,
+        required: formItemRequired,
+        onBlur: formItemOnBlur,
+        onChange: formItemOnChange,
+        onFocus: formItemOnFocus,
+        value: formItemValue as string,
+      },
+      fieldAction
+    );
+  }, [
+    formItemValue,
+    errorMessage,
+    formItemDisabled,
+    formDataAccessed ? formData : false,
+  ]);
+
+  return noOptimise
+    ? children(
+        {
+          ...restProps,
+          disabled: !!disabled,
+          error: !!errorMessage,
+          helperText: errorMessage ?? helperText,
+          name,
+          required: formItemRequired,
+          onBlur: formItemOnBlur,
+          onChange: formItemOnChange,
+          onFocus: formItemOnFocus,
+          value: formItemValue as string,
+        },
+        {
+          formData,
+          getFieldValue,
+          setFieldValue,
+          setFormValue,
+        }
+      )
+    : toRender;
 }

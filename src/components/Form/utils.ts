@@ -3,12 +3,8 @@ import isArray from "lodash/isArray";
 import get from "lodash/get";
 import merge from "lodash/merge";
 import set from "lodash/set";
-import {
-  IKeyValuePair,
-  IKeyValuePairString,
-  IReducerAction,
-  ReducerAction,
-} from ".";
+import { Data, IReducerAction, ReducerAction } from ".";
+import { useEffect, useRef } from "react";
 
 export const mergeFunction = (arrayMergeKeys = ["uid"]) => {
   return (objValue: any, srcValue: any, key: string, obj: {}, src: {}) => {
@@ -44,10 +40,10 @@ export const mergeFunction = (arrayMergeKeys = ["uid"]) => {
 };
 
 export const reducerFunction = (
-  data: IKeyValuePair | undefined = {},
-  groupIds: IKeyValuePairString
+  data: Data = {},
+  groupIds: Record<string, string>
 ) => {
-  return (state: IKeyValuePair, action: IReducerAction) => {
+  return (state: Data, action: IReducerAction) => {
     const { type, payload } = action;
     const { name, value, groupId } = payload;
     let toMerge = {};

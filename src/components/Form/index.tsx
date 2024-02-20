@@ -2,15 +2,14 @@ import React, {
   createContext,
   useState,
   useRef,
-  useMemo,
   useEffect,
   useReducer,
+  useCallback,
 } from "react";
 import mergeWith from "lodash/mergeWith";
 import get from "lodash/get";
-import set from "lodash/set";
-import merge from "lodash/merge";
 import { mergeFunction, reducerFunction } from "./utils";
+import { removeUndefinedFromObject } from "../../utils";
 
 export type PrimitiveValue =
   | string
@@ -21,18 +20,15 @@ export type PrimitiveValue =
   | symbol
   | null;
 
-export interface IKeyValuePair {
-  [name: string]: PrimitiveValue;
-}
+export type FieldValue = PrimitiveValue | PrimitiveValue[];
 
-export interface IKeyValuePairString {
-  [key: string]: string;
-}
+export type Data = {
+  [name: string]: FieldValue | Data | Data[];
+};
 
 interface IFormAction {
-  formData: IKeyValuePair;
+  modifiedFormData: Data;
   isValid: boolean;
-  modifiedFormData: IKeyValuePair;
   submit: () => void;
 }
 
@@ -41,47 +37,32 @@ interface IForm {
   children:
     | ((formAction: IFormAction) => JSX.Element)
     | ((formAction: IFormAction) => JSX.Element[]);
-  data?: { [name: string]: any };
+  data?: Data;
   onSubmit?: (props: {
-    formData: IKeyValuePair;
+    formData: Data;
     isValid?: boolean;
-    modifiedFormData: IKeyValuePair;
+    modifiedFormData: Data;
     clearModifiedFormData: () => void;
   }) => void;
 }
 
 export interface IFormValidation {
+  name?: string;
   message: string;
-  expression?: (data: PrimitiveValue) => boolean;
+  expression?: (data: PrimitiveValue, formData?: Data) => boolean;
   type?: "required";
 }
 
 interface IFormContext {
-  formData: IKeyValuePair;
-  getFieldError: (name: string) => string | undefined;
-  getFieldValue: (name: string) => PrimitiveValue;
-  mostRecentFieldFocus: React.MutableRefObject<{
-    name: string;
-    value: PrimitiveValue;
-  }>;
-  setFormError: (name: string, value: string) => void;
-  setFormGroupId: (name: string, groupId: string | undefined) => void;
+  errors: React.MutableRefObject<Record<string, string>>;
+  formData: Data;
+  groupIds: React.MutableRefObject<Record<string, string>>;
   setFormValue: (name: string, value: PrimitiveValue, groupId?: string) => void;
-  setFormValidation: (
-    name: string,
-    validations: IFormValidation[],
-    required: boolean
-  ) => void;
   triggerFieldValidation: (
     name: string,
     value: PrimitiveValue
   ) => string | undefined;
-}
-
-export enum ReducerAction {
-  CLEAR = "CLEAR",
-  SET = "SET",
-  SET_WITH_GROUP_ID = "SET_WITH_GROUP_ID",
+  validations: React.MutableRefObject<Record<string, IFormValidation[]>>;
 }
 
 interface IReducerPayload {
@@ -90,6 +71,11 @@ interface IReducerPayload {
   value: PrimitiveValue;
 }
 
+export enum ReducerAction {
+  CLEAR = "CLEAR",
+  SET = "SET",
+  SET_WITH_GROUP_ID = "SET_WITH_GROUP_ID",
+}
 export interface IReducerAction {
   payload: IReducerPayload;
   type: ReducerAction;
@@ -98,73 +84,85 @@ export interface IReducerAction {
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const { arrayMergeKeys, children, data = undefined, onSubmit } = props;
-  // useEffect(() => {
-  //   console.log("streamData", data);
-  // }, [data]);
+  const {
+    arrayMergeKeys = ["uid"],
+    children,
+    data = undefined,
+    onSubmit,
+  } = props;
 
-  const [formValidations, setFormValidations] = useState<{
-    [key: string]: IFormValidation[];
-  }>({});
-  // useEffect(() => {
-  //   console.log("formValidations", formValidations);
-  // }, [formValidations]);
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
-  const [errors, setErrors] = useState<IKeyValuePairString>({});
-  // useEffect(() => {
-  //   console.log("errors", errors);
-  // }, [errors]);
-
-  const [groupIds, setGroupIds] = useState<IKeyValuePairString>({});
-  // useEffect(() => {
-  //   console.log("groupIds", groupIds);
-  // }, [groupIds]);
-
-  const [isValid, setIsValid] = useState<boolean>(false);
+  const groupIds = useRef<Record<string, string>>({});
+  const validations = useRef<Record<string, IFormValidation[]>>({});
+  const errors = useRef<Record<string, string>>({});
 
   const [modifiedFormData, dispatch] = useReducer(
-    reducerFunction(data, groupIds),
+    reducerFunction(data, groupIds.current),
     {}
   );
 
-  const formData = useMemo(() => {
-    return mergeWith({}, data, modifiedFormData, mergeFunction(arrayMergeKeys));
+  const [formData, setFormData] = useState<Data>(data || {});
+  useEffect(() => {
+    setFormData(
+      mergeWith({}, data, modifiedFormData, mergeFunction(arrayMergeKeys))
+    );
   }, [modifiedFormData, data]);
 
-  // useEffect(() => {
-  //   console.log("formData", formData);
-  // }, [formData]);
+  const clearModifiedFormData = useCallback(() => {
+    dispatch({ type: ReducerAction.CLEAR, payload: { name: "", value: "" } });
+  }, []);
 
-  useEffect(() => {
-    let isFormValid = true;
-    Object.keys(formValidations).forEach((name) => {
-      const fieldData = get(formData, name);
-      const validationMessage = triggerFieldValidation(name, fieldData);
-      if (validationMessage) {
-        isFormValid = false;
+  const isValid = Object.values(errors.current).filter((e) => !!e).length === 0;
+
+  const submit = () => {
+    Object.keys(validations.current).forEach((name) => {
+      triggerFieldValidation(name, get(formData, name) as PrimitiveValue);
+    });
+    const formIsValid =
+      Object.values(errors.current).filter((e) => !!e).length === 0;
+    forceUpdate();
+    onSubmit?.({
+      isValid: formIsValid,
+      formData,
+      modifiedFormData,
+      clearModifiedFormData,
+    });
+  };
+
+  const triggerFieldValidation = (
+    name: string,
+    value: PrimitiveValue
+  ): string | undefined => {
+    const validationObject = validations.current?.[name]?.find((validation) => {
+      if (validation.type === "required") {
+        return !value;
+      } else {
+        return validation.expression?.(value, formData);
       }
     });
-    setIsValid(isFormValid);
-  }, [formData]);
-
-  const formRef = useRef(null);
-
-  const mostRecentFieldFocus = useRef({ name: "", value: undefined });
-
-  const getFieldError = (name: string): string => {
-    return errors[name];
+    if (validationObject?.message) {
+      errors.current = {
+        ...errors.current,
+        [name]: validationObject.message,
+      };
+    } else {
+      errors.current = removeUndefinedFromObject({
+        ...errors.current,
+        [name]: undefined,
+      });
+    }
+    return validationObject?.message;
   };
 
-  const setFormGroupId = (name: string, groupId: string | undefined) => {
-    groupId && setGroupIds((prev) => ({ ...prev, [name]: groupId }));
-  };
-
-  const getFieldValue = (name: string): PrimitiveValue => {
-    return get(formData, name);
-  };
-
-  const setFormError = (name: string, value: string) => {
-    setErrors((prev) => ({ ...prev, [name]: value }));
+  const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
+    event.preventDefault();
+    onSubmit?.({
+      formData,
+      isValid: true,
+      modifiedFormData,
+      clearModifiedFormData,
+    });
   };
 
   const setFormValue = (
@@ -172,124 +170,32 @@ export function Form(props: IForm) {
     value: PrimitiveValue,
     groupId?: string
   ) => {
-    const internalGroupId = groupId ?? groupIds[name];
-    if (!!internalGroupId) {
+    const internalGroupId = groupId ?? groupIds.current?.[name];
+    if (internalGroupId) {
       dispatch({
         type: ReducerAction.SET_WITH_GROUP_ID,
-        payload: { groupId: internalGroupId, name, value },
+        payload: { name, value },
       });
     } else {
       dispatch({ type: ReducerAction.SET, payload: { name, value } });
     }
   };
 
-  const setFormValidation = (
-    name: string,
-    validations: IFormValidation[],
-    required: boolean
-  ) => {
-    if (required) {
-      validations.unshift({
-        message: "This field is required",
-        type: "required",
-      });
-    }
-    const sortedValidations = validations.sort((validation) =>
-      validation.type === "required" ? -1 : 1
-    );
-    setFormValidations((prev) => ({ ...prev, [name]: sortedValidations }));
-  };
-
-  const triggerFieldValidation = (
-    name: string,
-    value: PrimitiveValue
-  ): string | undefined => {
-    const validationObject = formValidations?.[name]?.find((validation) => {
-      if (validation.type === "required") {
-        return !value;
-      } else {
-        return validation.expression?.(value);
-      }
-    });
-    if (validationObject?.message) {
-      setFormError(name, validationObject.message);
-    } else {
-      setFormError(name, "");
-    }
-    return validationObject?.message;
-  };
-
-  const clearModifiedFormData = () => {
-    dispatch({ type: ReducerAction.CLEAR, payload: { name: "", value: "" } });
-  };
-
-  const submit = () => {
-    let isFormValid = true;
-    Object.keys(formValidations).forEach((name) => {
-      if (name !== mostRecentFieldFocus.current.name) {
-        const validationMessage = triggerFieldValidation(
-          name,
-          get(formData, name)
-        );
-        if (!!validationMessage) {
-          isFormValid = false;
-        }
-      }
-    });
-    if (mostRecentFieldFocus.current.name !== "") {
-      setFormValue(
-        mostRecentFieldFocus.current.name,
-        mostRecentFieldFocus.current.value
-      );
-      const validationMessage = triggerFieldValidation(
-        mostRecentFieldFocus.current.name,
-        mostRecentFieldFocus.current.value
-      );
-      if (validationMessage) {
-        isFormValid = false;
-      }
-    }
-    const mostRecentFieldData = set(
-      {},
-      mostRecentFieldFocus.current.name,
-      mostRecentFieldFocus.current.value
-    );
-    const modifiedFormDataToSubmit = merge(
-      {},
-      modifiedFormData,
-      mostRecentFieldData
-    );
-    const formDataToSubmit = merge({}, formData, mostRecentFieldData);
-    setIsValid(isFormValid);
-    onSubmit?.({
-      isValid: isFormValid,
-      formData: formDataToSubmit,
-      modifiedFormData: modifiedFormDataToSubmit,
-      clearModifiedFormData,
-    });
-  };
-
-  const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
-    event.preventDefault();
-    submit();
-  };
+  const formRef = useRef(null);
 
   return (
     <FormContext.Provider
       value={{
+        errors,
         formData,
-        getFieldError,
-        getFieldValue,
-        mostRecentFieldFocus,
-        setFormError,
-        setFormGroupId,
+        groupIds,
         setFormValue,
-        setFormValidation,
         triggerFieldValidation,
+        validations,
       }}
     >
       <form ref={formRef} onSubmit={handleSubmit}>
-        {children({ submit, formData, isValid, modifiedFormData })}
+        {children({ modifiedFormData, isValid, submit })}
       </form>
     </FormContext.Provider>
   );

@@ -17,3 +17,15 @@ export const convertObjectValueToString = (obj: { [key: string]: any }) => {
   mutateObject(mutableObject);
   return mutableObject;
 };
+
+export function removeUndefinedFromObject(
+  obj: Record<string, any>
+): Record<string, any> {
+  const clonedObj = { ...obj };
+  Object.keys(clonedObj).forEach(
+    (key) =>
+      clonedObj[key as keyof typeof clonedObj] === undefined &&
+      delete clonedObj[key as keyof typeof clonedObj]
+  );
+  return clonedObj;
+}
