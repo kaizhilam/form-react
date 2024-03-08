@@ -1,381 +1,397 @@
-import { Form } from "..";
-import { FormItem } from ".";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { cleanInputProps, simulateUserChange } from "../../utils/testUtils";
 import React from "react";
+import { render, screen } from "@testing-library/react";
+import { Form } from "../Form";
+import { FormItem } from ".";
+import { simulateUserChange } from "../../utils/testUtils";
+import { act } from "react-dom/test-utils";
+import "@testing-library/jest-dom/extend-expect";
 
 describe("FormItem", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
-  });
-  const onSubmit = jest.fn();
-  const renderComponent = (props?: any) =>
+  it("SHOULD use onChange and onBlur to set modifiedFormData", () => {
+    const submit = jest.fn();
     render(
-      <Form onSubmit={onSubmit}>
-        {() => (
-          <>
-            <FormItem id="input" name="testName" label="testLabel" {...props}>
-              {({
-                error,
-                errorMessage,
-                id,
-                label,
-                name,
-                required,
-                type,
-                value,
-                onBlur,
-                onChange,
-                onFocus,
-              }) => {
-                return (
-                  <>
-                    {required && <div>Required</div>}
-                    <label htmlFor={id}>{label}</label>
-                    <input
-                      data-testid="input"
-                      id={id}
-                      name={name}
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      onFocus={onFocus}
-                      value={value}
-                      type={type}
-                    />
-                    {error && <div data-testid="error">{errorMessage}</div>}
-                  </>
-                );
-              }}
-            </FormItem>
-            <input type="submit" value="Submit" data-testid="submit" />
-          </>
-        )}
+      <Form onSubmit={submit}>
+        <FormItem name="test1">
+          {({ name, onChange, onBlur, value }) => (
+            <input
+              name={name}
+              onChange={onChange}
+              onBlur={onBlur}
+              data-testid={name}
+              value={value as string}
+            />
+          )}
+        </FormItem>
+        <FormItem name="test2">
+          {({ name, onChange, onBlur, value }) => (
+            <input
+              name={name}
+              onChange={onChange}
+              onBlur={onBlur}
+              data-testid={name}
+              value={value as string}
+            />
+          )}
+        </FormItem>
+        <button type="submit" data-testid="submit">
+          Submit
+        </button>
       </Form>
     );
-  it("SHOULD render", () => {
-    renderComponent();
-    const element = screen.getByTestId("input");
-    expect(element).toBeTruthy();
+    const test1 = screen.getByTestId<HTMLInputElement>("test1");
+    simulateUserChange(test1, { target: { value: "testValue" } });
+    expect(test1.value).toEqual("testValue");
+    const submitButton = screen.getByTestId("submit");
+    act(() => submitButton.click());
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        formData: { test1: "testValue" },
+        modifiedFormData: { test1: "testValue" },
+      })
+    );
   });
-  describe("validations", () => {
-    it("SHOULD setup required validation with required props", () => {
-      render(
-        <Form onSubmit={onSubmit}>
-          {() => (
-            <FormItem id="testId" name="testName" required>
-              {(props, { setFieldValue, setFormValue }) => {
-                const inputProps = cleanInputProps(props);
-                return (
-                  <>
-                    <input {...inputProps} data-testid="input" />
-                    {props.error && (
-                      <div data-testid="error">{props.errorMessage}</div>
-                    )}
-                  </>
-                );
-              }}
-            </FormItem>
-          )}
-        </Form>
-      );
-      const inputElement = screen.getByTestId("input");
-      fireEvent.blur(inputElement);
-      const errorElement = screen.queryByTestId("error");
-      expect(errorElement).toBeTruthy();
-    });
-    it("SHOULD setup validation with expression", () => {
-      render(
-        <Form onSubmit={onSubmit}>
-          {() => (
-            <FormItem
-              id="testId"
-              name="testName"
-              validations={[
-                {
-                  message: "validation triggered",
-                  expression: (data) => data === "trigger validation",
-                },
-              ]}
-            >
-              {(props, { setFieldValue, setFormValue }) => {
-                const inputProps = cleanInputProps(props);
-                return (
-                  <>
-                    <input {...inputProps} data-testid="input" />
-                    {props.error && (
-                      <div data-testid="error">{props.errorMessage}</div>
-                    )}
-                  </>
-                );
-              }}
-            </FormItem>
-          )}
-        </Form>
-      );
-      const inputElement = screen.getByTestId("input");
-      simulateUserChange(inputElement, {
-        target: { value: "trigger validation" },
-      });
-      const errorElement = screen.queryByTestId("error");
-      expect(errorElement).toBeTruthy();
-    });
-  });
-  describe("events", () => {
-    it("SHOULD trigger onChange event", () => {
-      const onChange = jest.fn();
-      renderComponent({ onChange });
-      const element = screen.getByTestId("input");
-      fireEvent.change(element, { target: { value: "aaa111" } });
-      expect(onChange).toHaveBeenCalledTimes(1);
-    });
-    it("SHOULD trigger onFocus event", () => {
-      const onFocus = jest.fn();
-      renderComponent({ onFocus });
-      const element = screen.getByTestId("input");
-      fireEvent.focus(element);
-      expect(onFocus).toHaveBeenCalledTimes(1);
-    });
-    it("SHOULD trigger onBlur event", () => {
-      const onBlur = jest.fn();
-      renderComponent({ onBlur });
-      const element = screen.getByTestId("input");
-      fireEvent.blur(element);
-      expect(onBlur).toHaveBeenCalledTimes(1);
-    });
-  });
-  describe("FormItemAction", () => {
-    describe("getFieldValue", () => {
-      it("SHOULD get field value", () => {
-        render(
-          <Form data={{ data: "display" }}>
-            {() => (
-              <FormItem id="display" name="display">
-                {(props, { getFieldValue }) => {
-                  return getFieldValue("data") === "display" ? (
-                    <div data-testid="display">should display</div>
-                  ) : (
-                    <div data-testid="display">should not display</div>
-                  );
-                }}
-              </FormItem>
-            )}
-          </Form>
-        );
-        const element = screen.getByTestId("display");
-        expect(element.textContent).toEqual("should display");
-      });
-    });
-    describe("setFieldValue", () => {
-      it("SHOULD set field value", () => {
-        render(
-          <Form data={{ test: "should not display" }}>
-            {() => (
-              <FormItem id="test" name="test">
-                {(props, { setFieldValue }) => (
-                  <>
-                    <button
-                      data-testid="button"
-                      onClick={() => setFieldValue("should display")}
-                    >
-                      Click here
-                    </button>
-                    <div data-testid="display">{props.value}</div>
-                  </>
-                )}
-              </FormItem>
-            )}
-          </Form>
-        );
-        const button = screen.getByTestId("button");
-        fireEvent.click(button);
-        const element = screen.getByTestId("display");
-        expect(element.textContent).toEqual("should display");
-      });
-      it("SHOULD set field value with groupId", () => {
+  describe("validation", () => {
+    describe("required", () => {
+      it("SHOULD validate required in FormItem", () => {
         const onSubmit = jest.fn();
         render(
-          <Form
-            data={{
-              test: "should change",
-              test2: "should be in modified data",
-              test3: "should not be in modified data",
-            }}
-            onSubmit={onSubmit}
-          >
-            {() => (
+          <Form onSubmit={onSubmit}>
+            {({ submit }) => (
               <>
-                <FormItem id="test" name="test" groupId="same">
-                  {(props, { setFieldValue }) => (
+                <FormItem name="test" required>
+                  {({
+                    name,
+                    onChange,
+                    onBlur,
+                    value,
+                    required,
+                    helperText,
+                  }) => (
                     <>
-                      <button
-                        data-testid="button"
-                        onClick={() =>
-                          setFieldValue("should be in modified data")
-                        }
-                      >
-                        Click here
-                      </button>
-                      <div data-testid="display">{props.value}</div>
+                      <input
+                        name={name}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value as string}
+                        required={required}
+                      />
+                      <span data-testid="helperText">{helperText}</span>
                     </>
                   )}
                 </FormItem>
-                <FormItem id="test2" name="test2" groupId="same">
-                  {() => <div>test2</div>}
-                </FormItem>
-                <FormItem id="test3" name="test3" groupId="different">
-                  {() => <div>test3</div>}
-                </FormItem>
-                <button type="submit" data-testid="submit">
-                  submit
+                <button data-testid="submit" onClick={submit}>
+                  Submit
                 </button>
               </>
             )}
           </Form>
         );
-        const button = screen.getByTestId("button");
-        fireEvent.click(button);
-        const submit = screen.getByTestId("submit");
-        fireEvent.click(submit);
+        const submitButton = screen.getByTestId("submit");
+        act(() => submitButton.click());
         expect(onSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
+            isValid: false,
+          })
+        );
+        const helperText = screen.getByTestId("helperText");
+        expect(helperText.textContent).toEqual("This field is required.");
+      });
+      it("SHOULD validate required in FormItem validations prop", () => {
+        const onSubmit = jest.fn();
+        render(
+          <Form onSubmit={onSubmit}>
+            {({ submit }) => (
+              <>
+                <FormItem
+                  name="test"
+                  validations={[{ type: "required", message: "Test required" }]}
+                >
+                  {({
+                    name,
+                    onChange,
+                    onBlur,
+                    value,
+                    required,
+                    helperText,
+                  }) => (
+                    <>
+                      <input
+                        name={name}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value as string}
+                        required={required}
+                      />
+                      <span data-testid="helperText">{helperText}</span>
+                    </>
+                  )}
+                </FormItem>
+                <button data-testid="submit" onClick={submit}>
+                  Submit
+                </button>
+              </>
+            )}
+          </Form>
+        );
+        const submitButton = screen.getByTestId("submit");
+        act(() => submitButton.click());
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isValid: false,
+          })
+        );
+        const helperText = screen.getByTestId("helperText");
+        expect(helperText.textContent).toEqual("Test required");
+      });
+      it("SHOULD validate required in FormItem required and FormItem validation prop", () => {
+        const onSubmit = jest.fn();
+        render(
+          <Form onSubmit={onSubmit}>
+            {({ submit }) => (
+              <>
+                <FormItem
+                  name="test"
+                  validations={[{ type: "required", message: "Test required" }]}
+                  required
+                >
+                  {({
+                    name,
+                    onChange,
+                    onBlur,
+                    value,
+                    required,
+                    helperText,
+                  }) => (
+                    <>
+                      <input
+                        name={name}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        value={value as string}
+                        required={required}
+                      />
+                      <span data-testid="helperText">{helperText}</span>
+                    </>
+                  )}
+                </FormItem>
+                <button data-testid="submit" onClick={submit}>
+                  Submit
+                </button>
+              </>
+            )}
+          </Form>
+        );
+        const submitButton = screen.getByTestId("submit");
+        act(() => submitButton.click());
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isValid: false,
+          })
+        );
+        const helperText = screen.getByTestId("helperText");
+        expect(helperText.textContent).toEqual("Test required");
+      });
+    });
+    it("SHOULD validate against expression", () => {
+      const onSubmit = jest.fn();
+      render(
+        <Form onSubmit={onSubmit}>
+          {({ submit }) => (
+            <>
+              <FormItem
+                name="test"
+                validations={[
+                  {
+                    name: "test",
+                    expression: (data) => data === "test",
+                    message: "Cannot be test",
+                  },
+                ]}
+              >
+                {({ name, onChange, onBlur, value, required, helperText }) => (
+                  <>
+                    <input
+                      name={name}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      value={value as string}
+                      required={required}
+                      data-testid="input"
+                    />
+                    <span data-testid="helperText">{helperText}</span>
+                  </>
+                )}
+              </FormItem>
+              <button data-testid="submit" onClick={submit}>
+                Submit
+              </button>
+            </>
+          )}
+        </Form>
+      );
+      const submitButton = screen.getByTestId("submit");
+      act(() => submitButton.click());
+      expect(onSubmit).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          isValid: true,
+          modifiedFormData: {},
+          formData: {},
+        })
+      );
+      const input = screen.getByTestId("input");
+      simulateUserChange(input, { target: { value: "test" } });
+      act(() => submitButton.click());
+      expect(onSubmit).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          isValid: false,
+          modifiedFormData: { test: "test" },
+          formData: { test: "test" },
+        })
+      );
+      const helperText = screen.getByTestId("helperText");
+      expect(helperText.textContent).toEqual("Cannot be test");
+    });
+  });
+  describe("childAction", () => {
+    describe("getFieldValue", () => {
+      it("SHOULD show hide base on getFieldValue", () => {
+        render(
+          <Form>
+            <FormItem name="test1">
+              {({ name, onChange, onBlur, value }, { setFormValue }) => (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={(e) => {
+                    onBlur(e);
+                    setFormValue("test2", e.target.value);
+                  }}
+                  data-testid={name}
+                  value={value as string}
+                />
+              )}
+            </FormItem>
+            <FormItem name="span-show">
+              {(_, { getFieldValue }) => {
+                if (getFieldValue("test2") === "show") {
+                  return <span data-testid="span-show">show</span>;
+                }
+              }}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              Submit
+            </button>
+          </Form>
+        );
+        const test1 = screen.getByTestId("test1");
+        simulateUserChange(test1, { target: { value: "show" } });
+        const spanShow = screen.queryByTestId("span-show");
+        expect(spanShow).toBeInTheDocument();
+      });
+    });
+    describe("setFieldValue", () => {
+      it("SHOULD setFieldValue", () => {
+        const submit = jest.fn();
+        render(
+          <Form onSubmit={submit}>
+            <FormItem name="test">
+              {({ name }, { setFieldValue }) => {
+                return (
+                  <button
+                    name={name}
+                    onClick={() => {
+                      setFieldValue("testValue");
+                    }}
+                    data-testid="set-value"
+                  >
+                    Set value
+                  </button>
+                );
+              }}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              Submit
+            </button>
+          </Form>
+        );
+        const submitButton = screen.getByTestId("submit");
+        act(() => submitButton.click());
+        expect(submit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isValid: true,
+            formData: {},
+            modifiedFormData: {},
+          })
+        );
+        const setValueButton = screen.getByTestId("set-value");
+        act(() => setValueButton.click());
+        act(() => submitButton.click());
+        expect(submit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isValid: true,
+            formData: {
+              test: "testValue",
+            },
             modifiedFormData: {
-              test: "should be in modified data",
-              test2: "should be in modified data",
+              test: "testValue",
             },
           })
         );
       });
     });
     describe("setFormValue", () => {
-      it("SHOULD set form value", () => {
+      it("SHOULD setFormValue", () => {
+        const submit = jest.fn();
         render(
-          <Form data={{ test: "should not display" }}>
-            {() => (
-              <>
-                <FormItem id="button" name="button">
-                  {(props, { setFormValue }) => (
-                    <button
-                      data-testid="button"
-                      onClick={() => setFormValue("test", "should display")}
-                    >
-                      Click here
-                    </button>
-                  )}
-                </FormItem>
-                <FormItem id="test" name="test">
-                  {(props) => <div data-testid="display">{props.value}</div>}
-                </FormItem>
-              </>
-            )}
-          </Form>
-        );
-        const button = screen.getByTestId("button");
-        fireEvent.click(button);
-        const element = screen.getByTestId("display");
-        expect(element.textContent).toEqual("should display");
-      });
-      it("SHOULD set form value with groupId", () => {
-        const onSubmit = jest.fn();
-        render(
-          <Form
-            data={{
-              test: "should change",
-              test2: "should be in modified data",
-              test3: "should not be in modified data",
-            }}
-            onSubmit={onSubmit}
-          >
-            {() => (
-              <>
-                <FormItem id="button" name="button">
-                  {(props, { setFormValue }) => (
-                    <button
-                      data-testid="button"
-                      onClick={() =>
-                        setFormValue(
-                          "test",
-                          "should be in modified data",
-                          "same"
-                        )
-                      }
-                    >
-                      Click here
-                    </button>
-                  )}
-                </FormItem>
-                <FormItem id="test" name="test" groupId="same">
-                  {() => <div>test</div>}
-                </FormItem>
-                <FormItem id="test2" name="test2" groupId="same">
-                  {() => <div>test2</div>}
-                </FormItem>
-                <FormItem id="test3" name="test3" groupId="different">
-                  {() => <div>test3</div>}
-                </FormItem>
-                <button type="submit" data-testid="submit">
-                  submit
-                </button>
-              </>
-            )}
-          </Form>
-        );
-        const button = screen.getByTestId("button");
-        fireEvent.click(button);
-        const submit = screen.getByTestId("submit");
-        fireEvent.click(submit);
-        expect(onSubmit).toHaveBeenCalledWith(
-          expect.objectContaining({
-            modifiedFormData: {
-              test: "should be in modified data",
-              test2: "should be in modified data",
-            },
-          })
-        );
-      });
-      it("SHOULD set form value without race condition", () => {
-        const onSubmit = jest.fn();
-        render(
-          <Form
-            data={{
-              test: "should not be this value",
-              test2: "should not be this value",
-            }}
-            onSubmit={onSubmit}
-          >
-            {() => (
-              <>
-                <FormItem id="test" name="test" groupId="same">
-                  {(props, { setFieldValue, setFormValue }) => {
-                    const inputProps = cleanInputProps(props);
-                    return (
-                      <input
-                        {...inputProps}
-                        data-testid="test"
-                        onBlur={(e) => {
-                          setFormValue("test2", "should be this value", "same");
-                          setFieldValue("should be this value");
-                        }}
-                      />
-                    );
+          <Form onSubmit={submit}>
+            <FormItem name="test1">
+              {({ name, onChange, onBlur, value }, { setFormValue }) => (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={(e) => {
+                    onBlur(e);
+                    setFormValue("test2", e.target.value);
                   }}
-                </FormItem>
-                <button type="submit" data-testid="submit">
-                  submit
-                </button>
-              </>
-            )}
+                  data-testid={name}
+                  value={value as string}
+                />
+              )}
+            </FormItem>
+            <FormItem name="test2">
+              {({ name, onChange, onBlur, value }) => (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  data-testid={name}
+                  value={value as string}
+                />
+              )}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              Submit
+            </button>
           </Form>
         );
-        const input = screen.getByTestId("test");
-        fireEvent.blur(input);
-        const button = screen.getByTestId("submit");
-        fireEvent.click(button);
-        expect(onSubmit).toHaveBeenCalledWith(
+        const test1 = screen.getByTestId("test1");
+        simulateUserChange(test1, { target: { value: "testValue" } });
+        const test2 = screen.getByTestId<HTMLInputElement>("test2");
+        expect(test2.value).toEqual("testValue");
+        const submitButton = screen.getByTestId("submit");
+        act(() => submitButton.click());
+        expect(submit).toHaveBeenCalledWith(
           expect.objectContaining({
+            isValid: true,
+            formData: {
+              test1: "testValue",
+              test2: "testValue",
+            },
             modifiedFormData: {
-              test: "should be this value",
-              test2: "should be this value",
+              test1: "testValue",
+              test2: "testValue",
             },
           })
         );

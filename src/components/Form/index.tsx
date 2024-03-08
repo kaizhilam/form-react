@@ -1,202 +1,277 @@
-import React, {
-  createContext,
-  useState,
-  useRef,
-  useEffect,
-  useReducer,
-  useCallback,
-} from "react";
-import mergeWith from "lodash/mergeWith";
-import get from "lodash/get";
-import { mergeFunction, reducerFunction } from "./utils";
-import { removeUndefinedFromObject } from "../../utils";
+import { get, merge, set } from "lodash";
+import React, { createContext, useRef } from "react";
+import { removeDuplicates, removeUndefinedFromObject } from "../../utils";
 
-export type PrimitiveValue =
-  | string
-  | number
-  | bigint
-  | boolean
-  | undefined
-  | symbol
-  | null;
+export type PrimitiveValue = string | number | boolean;
 
-export type FieldValue = PrimitiveValue | PrimitiveValue[];
-
-export type Data = {
-  [name: string]: FieldValue | Data | Data[];
-};
-
-interface IFormAction {
-  modifiedFormData: Data;
-  isValid: boolean;
-  submit: () => void;
-}
-
-interface IForm {
-  arrayMergeKeys?: string[];
-  children:
-    | ((formAction: IFormAction) => JSX.Element)
-    | ((formAction: IFormAction) => JSX.Element[]);
-  data?: Data;
-  onSubmit?: (props: {
-    formData: Data;
-    isValid?: boolean;
-    modifiedFormData: Data;
-    clearModifiedFormData: () => void;
-  }) => void;
-}
-
-export interface IFormValidation {
+export interface IFieldValidation {
   name?: string;
+  expression?: (data: PrimitiveValue) => boolean;
   message: string;
-  expression?: (data: PrimitiveValue, formData?: Data) => boolean;
   type?: "required";
 }
 
+interface IDependencies {
+  [key: string]: string[];
+}
+
+interface IErrors {
+  [key: string]: (errorMessage: string) => void;
+}
+interface IForceUpdates {
+  [key: string]: () => void;
+}
+
+interface ISetDatas {
+  [key: string]: (data: PrimitiveValue) => void;
+}
+
+interface IValidations {
+  [key: string]: IFieldValidation[];
+}
+
+export interface IFormData {
+  [name: string]: PrimitiveValue | IFormData | IFormData[];
+}
+
+
+interface IOnSubmitProps {
+  clearModifiedFormData: () => void;
+  formData: IFormData;
+  modifiedFormData: IFormData;
+  isValid: boolean;
+}
+
+interface IForm {
+  children:
+    | React.ReactNode
+    | ((formChildProps: { submit: () => void }) => React.ReactNode);
+  data?: IFormData;
+  div?: boolean;
+  onSubmit?: (onSubmitProps: IOnSubmitProps) => void;
+}
+
 interface IFormContext {
-  errors: React.MutableRefObject<Record<string, string>>;
-  formData: Data;
-  groupIds: React.MutableRefObject<Record<string, string>>;
-  setFormValue: (name: string, value: PrimitiveValue, groupId?: string) => void;
-  triggerFieldValidation: (
-    name: string,
-    value: PrimitiveValue
-  ) => string | undefined;
-  validations: React.MutableRefObject<Record<string, IFormValidation[]>>;
-}
-
-interface IReducerPayload {
-  groupId?: string;
-  name: string;
-  value: PrimitiveValue;
-}
-
-export enum ReducerAction {
-  CLEAR = "CLEAR",
-  SET = "SET",
-  SET_WITH_GROUP_ID = "SET_WITH_GROUP_ID",
-}
-export interface IReducerAction {
-  payload: IReducerPayload;
-  type: ReducerAction;
+  getFormData: (fieldName?: string) => IFormData | PrimitiveValue;
+  registerDependencies: (fieldName: string, dependency: string) => void;
+  registerError: (
+    fieldName: string,
+    setError: (errorMessage: string) => void
+  ) => void;
+  registerForceUpdate: (fieldName: string, forceUpdate: () => void) => void;
+  registerSetData: (
+    fieldName: string,
+    setData: (data: PrimitiveValue) => void
+  ) => void;
+  registerValidations: (
+    fieldName: string,
+    fieldValidations: IFieldValidation[]
+  ) => void;
+  setFormData: (name: string, value: PrimitiveValue) => void;
+  setFormDataWithRerender: (name: string, value: PrimitiveValue) => void;
+  triggerFieldValidation: ({
+    fieldName,
+    fieldValue,
+    setFieldError,
+  }: {
+    fieldName: string;
+    fieldValue?: PrimitiveValue;
+    setFieldError?: (errorMessage: string) => void;
+  }) => IFieldValidation | undefined;
 }
 
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const {
-    arrayMergeKeys = ["uid"],
-    children,
-    data = undefined,
-    onSubmit,
-  } = props;
+  const { children, data = undefined, div = false, onSubmit } = props;
 
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const modifiedFormData = useRef<IFormData>({});
 
-  const groupIds = useRef<Record<string, string>>({});
-  const validations = useRef<Record<string, IFormValidation[]>>({});
-  const errors = useRef<Record<string, string>>({});
+  const dependencies = useRef<IDependencies>({});
+  const errors = useRef<IErrors>({});
+  const forceUpdates = useRef<IForceUpdates>({});
+  const setDatas = useRef<ISetDatas>({});
+  const validations = useRef<IValidations>({});
 
-  const [modifiedFormData, dispatch] = useReducer(
-    reducerFunction(data, groupIds.current),
-    {}
-  );
+  const getFormData = (fieldName?: string): IFormData | PrimitiveValue => {
+    const formData = {};
+    merge(formData, data, modifiedFormData.current);
+    if (fieldName) {
+      return get(formData, fieldName);
+    } else {
+      return formData;
+    }
+  };
 
-  const [formData, setFormData] = useState<Data>(data || {});
-  useEffect(() => {
-    setFormData(
-      mergeWith({}, data, modifiedFormData, mergeFunction(arrayMergeKeys))
-    );
-  }, [modifiedFormData, data]);
-
-  const clearModifiedFormData = useCallback(() => {
-    dispatch({ type: ReducerAction.CLEAR, payload: { name: "", value: "" } });
-  }, []);
-
-  const isValid = Object.values(errors.current).filter((e) => !!e).length === 0;
-
-  const submit = () => {
-    Object.keys(validations.current).forEach((name) => {
-      triggerFieldValidation(name, get(formData, name) as PrimitiveValue);
-    });
-    const formIsValid =
-      Object.values(errors.current).filter((e) => !!e).length === 0;
-    forceUpdate();
-    onSubmit?.({
-      isValid: formIsValid,
-      formData,
-      modifiedFormData,
-      clearModifiedFormData,
+  const setFormData = (fieldName: string, value: PrimitiveValue) => {
+    const dataToSet = {};
+    set(dataToSet, fieldName, value);
+    const dataToMerge = modifiedFormData.current;
+    merge(dataToMerge, dataToSet);
+    modifiedFormData.current = dataToMerge;
+    dependencies.current?.[fieldName]?.forEach((d) => {
+      forceUpdates.current[d]();
     });
   };
 
-  const triggerFieldValidation = (
-    name: string,
+  const setFormDataWithRerender = (
+    fieldName: string,
     value: PrimitiveValue
-  ): string | undefined => {
-    const validationObject = validations.current?.[name]?.find((validation) => {
-      if (validation.type === "required") {
-        return !value;
-      } else {
-        return validation.expression?.(value, formData);
-      }
-    });
-    if (validationObject?.message) {
-      errors.current = {
-        ...errors.current,
-        [name]: validationObject.message,
+  ) => {
+    if (getFormData(fieldName) !== value) {
+      setFormData(fieldName, value);
+      triggerFieldValidation({
+        fieldName,
+        fieldValue: value,
+        setFieldError: errors.current[fieldName],
+      });
+      forceUpdates.current?.[fieldName]?.();
+    }
+  };
+
+  const registerDependencies = (fieldName: string, dependency: string) => {
+    if (!dependencies.current?.[dependency]) {
+      dependencies.current = {
+        ...dependencies.current,
+        [dependency]: [fieldName],
       };
     } else {
-      errors.current = removeUndefinedFromObject({
-        ...errors.current,
-        [name]: undefined,
-      });
+      const dependenciesArray = [
+        fieldName,
+        ...dependencies.current[dependency],
+      ];
+      dependencies.current = {
+        ...dependencies.current,
+        [dependency]: removeDuplicates(dependenciesArray),
+      };
     }
-    return validationObject?.message;
   };
 
-  const handleSubmit = (event: React.SyntheticEvent<HTMLElement>) => {
-    event.preventDefault();
-    onSubmit?.({
-      formData,
-      isValid: true,
-      modifiedFormData,
-      clearModifiedFormData,
+  const registerError = (
+    fieldName: string,
+    setError: (errorMessage: string) => void
+  ) => {
+    errors.current = {
+      ...errors.current,
+      [fieldName]: setError,
+    };
+  };
+
+  const registerForceUpdate = (fieldName: string, forceUpdate: () => void) => {
+    forceUpdates.current = {
+      ...forceUpdates.current,
+      [fieldName]: forceUpdate,
+    };
+  };
+
+  const registerSetData = (
+    fieldName: string,
+    setData: (data: PrimitiveValue) => void
+  ) => {
+    setDatas.current = {
+      ...setDatas.current,
+      [fieldName]: setData,
+    };
+  };
+
+  const registerValidations = (
+    fieldName: string,
+    fieldValidations: IFieldValidation[]
+  ) => {
+    validations.current = {
+      ...validations.current,
+      [fieldName]: fieldValidations,
+    };
+  };
+
+  const triggerFieldValidation = ({
+    fieldName,
+    fieldValue,
+    setFieldError,
+  }: {
+    fieldName: string;
+    fieldValue?: PrimitiveValue;
+    setFieldError?: (errorMessage: string) => void;
+  }) => {
+    const validationTriggered = validations.current?.[fieldName]?.find((v) => {
+      if (fieldValue) {
+        return v.expression?.(fieldValue);
+      } else {
+        const valueToUse = getFormData(fieldName) as PrimitiveValue;
+        return v.expression?.(valueToUse);
+      }
+    });
+    if (validationTriggered) {
+      setFieldError?.(validationTriggered.message);
+    } else {
+      setFieldError?.("");
+    }
+    return validationTriggered;
+  };
+
+  const clearModifiedFormData = () => {
+    modifiedFormData.current = {};
+    Object.keys(setDatas.current).forEach((fieldName) => {
+      setDatas.current?.[fieldName](
+        (get(data, fieldName) as PrimitiveValue) ?? ""
+      );
     });
   };
 
-  const setFormValue = (
-    name: string,
-    value: PrimitiveValue,
-    groupId?: string
-  ) => {
-    const internalGroupId = groupId ?? groupIds.current?.[name];
-    if (internalGroupId) {
-      dispatch({
-        type: ReducerAction.SET_WITH_GROUP_ID,
-        payload: { name, value },
+  const calculateIsValid = (setError: boolean = false) => {
+    const formData = getFormData() as IFormData;
+    const allFields = Object.keys(forceUpdates.current);
+
+    const containsError = allFields.some((f) => {
+      const result = triggerFieldValidation({
+        fieldName: f,
+        fieldValue: get(formData, f) as PrimitiveValue,
+        setFieldError: setError ? errors.current[f] : undefined,
       });
-    } else {
-      dispatch({ type: ReducerAction.SET, payload: { name, value } });
-    }
+      return result;
+    });
+    return !containsError;
   };
 
-  const formRef = useRef(null);
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    const formData = getFormData() as IFormData;
+    onSubmit?.({
+      clearModifiedFormData,
+      formData,
+      modifiedFormData: modifiedFormData.current,
+      isValid: calculateIsValid(true),
+    });
+  };
+
+  const childToRender =
+    typeof children === "function"
+      ? children({
+          submit: handleSubmit,
+        })
+      : children;
 
   return (
-    <FormContext.Provider
-      value={{
-        errors,
-        formData,
-        groupIds,
-        setFormValue,
-        triggerFieldValidation,
-        validations,
-      }}
-    >
-      <form ref={formRef} onSubmit={handleSubmit}>
-        {children({ modifiedFormData, isValid, submit })}
-      </form>
-    </FormContext.Provider>
+    <>
+      <FormContext.Provider
+        value={{
+          getFormData,
+          registerDependencies,
+          registerError,
+          registerForceUpdate,
+          registerSetData,
+          registerValidations,
+          setFormData,
+          setFormDataWithRerender,
+          triggerFieldValidation,
+        }}
+      >
+        {div ? (
+          <div children={childToRender} />
+        ) : (
+          <form onSubmit={handleSubmit} children={childToRender} />
+        )}
+      </FormContext.Provider>
+    </>
   );
 }

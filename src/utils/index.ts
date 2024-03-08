@@ -18,14 +18,33 @@ export const convertObjectValueToString = (obj: { [key: string]: any }) => {
   return mutableObject;
 };
 
+/**
+ * A function that removes undefined value from object.
+ * @param obj Object with undefined as value.
+ * @returns Cleaned object without any undefined as value.
+ */
 export function removeUndefinedFromObject(
   obj: Record<string, any>
 ): Record<string, any> {
-  const clonedObj = { ...obj };
-  Object.keys(clonedObj).forEach(
-    (key) =>
-      clonedObj[key as keyof typeof clonedObj] === undefined &&
-      delete clonedObj[key as keyof typeof clonedObj]
-  );
+  const clonedObj = Object.assign({}, obj);
+  const mutateObject = (o: { [key: string]: any }) => {
+    Object.keys(o).forEach((key) => {
+      if (typeof o[key] === "object") {
+        return mutateObject(o[key]);
+      }
+      o[key as keyof typeof o] === undefined && delete o[key as keyof typeof o];
+    });
+    return o;
+  };
+  mutateObject(clonedObj);
   return clonedObj;
+}
+
+/**
+ * A function that removes duplicates from array.
+ * @param data array to remove duplicates from.
+ * @returns Cleaned array without any duplicates.
+ */
+export function removeDuplicates<T>(data: T[]): T[] {
+  return data.filter((value, index) => data.indexOf(value) === index);
 }
