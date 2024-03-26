@@ -74,6 +74,64 @@ describe("Form", () => {
       `);
     });
   });
+  describe("onChange", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      jest.restoreAllMocks();
+    });
+    const onChange = jest.fn();
+    const renderComponent = (initialData?: IFormData) => {
+      return render(
+        <Form data={initialData} onChange={onChange}>
+          <FormItem id="test" name="test">
+            {({ name, onChange, onBlur }) => {
+              return (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  data-testid={name}
+                />
+              );
+            }}
+          </FormItem>
+        </Form>
+      );
+    };
+    it("SHOULD run onChange on change of form", () => {
+      renderComponent();
+      const input = screen.getByTestId("test");
+      simulateUserChange(input, { target: { value: "testValue" } });
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formData: { test: "testValue" },
+          modifiedFormData: { test: "testValue" },
+        })
+      );
+      expect(onChange).toHaveBeenCalledTimes(1);
+      simulateUserChange(input, { target: { value: "testValue2" } });
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formData: { test: "testValue2" },
+          modifiedFormData: { test: "testValue2" },
+        })
+      );
+      expect(onChange).toHaveBeenCalledTimes(2);
+    });
+    it("SHOULD NOT call onChange on prepop", () => {
+      renderComponent({ test: "testValue" });
+      expect(onChange).toHaveBeenCalledTimes(0);
+      const input = screen.getByTestId("test");
+      simulateUserChange(input, { target: { value: "testValue" } });
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formData: { test: "testValue" },
+          modifiedFormData: { test: "testValue" },
+        })
+      );
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+  });
   describe("submit", () => {
     beforeEach(() => {
       jest.clearAllMocks();

@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import { FormContext, IFieldValidation, PrimitiveValue } from "../Form";
-import { isEmpty } from "lodash";
 
 interface IChildProps {
   disabled?: boolean;
@@ -71,7 +70,7 @@ export function FormItem(props: IFormItem) {
     registerForceUpdate(name, forceUpdate);
     registerError(name, setError);
     registerSetData(name, setData);
-  }, []);
+  }, [name]);
 
   useEffect(() => {
     // console.log(`register validation for field ${name}`);
@@ -81,7 +80,8 @@ export function FormItem(props: IFormItem) {
         {
           type: "required",
           message: "This field is required.",
-          expression: (data) => isEmpty(data),
+          expression: (data) =>
+            data === "" || data === undefined || data === null,
         },
         ...(validations ?? []),
       ]);
@@ -92,7 +92,8 @@ export function FormItem(props: IFormItem) {
         {
           type: "required",
           message: requiredValidation.message,
-          expression: (data) => isEmpty(data),
+          expression: (data) =>
+            data === "" || data === undefined || data === null,
         },
         ...cleanValidation,
       ]);
@@ -103,7 +104,8 @@ export function FormItem(props: IFormItem) {
         {
           type: "required",
           message: requiredValidation.message,
-          expression: (data) => isEmpty(data),
+          expression: (data) =>
+            data === "" || data === undefined || data === null,
         },
         ...cleanValidation,
       ]);
@@ -112,7 +114,7 @@ export function FormItem(props: IFormItem) {
     }
   }, [validations]);
 
-  const formDataDependency = getFormData(name) || "";
+  const formDataDependency = getFormData(name) ?? "";
   useEffect(() => {
     if (formDataDependency !== data && !focused.current) {
       // console.log("run prepop ", name);

@@ -4,22 +4,16 @@ import { Button, Switch, TextField } from "@mui/material";
 
 function App() {
   const [data, setData] = useState({
-    players: [
-      {
-        name: "player 1",
-      },
-      {
-        name: "player 2",
-      },
-      {
-        name: "player 3",
-      },
-    ],
+    players: Array.from(Array(100).keys()).map((e) => ({ uid: e })),
+    test: 0,
   });
   return (
     <>
       <div className="App">
         <Form
+          onChange={(e) => {
+            console.log("onChange", e);
+          }}
           onSubmit={({
             isValid,
             modifiedFormData,
@@ -85,6 +79,21 @@ function App() {
                 }}
               </FormItem>
               <br />
+              {data.players.map((e, index) => {
+                return (
+                  <React.Fragment key={e.uid}>
+                    <FormItem
+                      id={`players.${index}.uid`}
+                      name={`players.${index}.uid`}
+                    >
+                      {(props) => {
+                        return <TextField {...props} />;
+                      }}
+                    </FormItem>
+                    <br />
+                  </React.Fragment>
+                );
+              })}
               <Button
                 onClick={() => {
                   // @ts-ignore

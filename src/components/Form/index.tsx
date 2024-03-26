@@ -1,12 +1,12 @@
 import { get, merge, set } from "lodash";
 import React, { createContext, useRef } from "react";
-import { removeDuplicates, removeUndefinedFromObject } from "../../utils";
+import { removeDuplicates } from "../../utils";
 
 export type PrimitiveValue = string | number | boolean;
 
 export interface IFieldValidation {
   name?: string;
-  expression?: (data: PrimitiveValue) => boolean;
+  expression?: (data: PrimitiveValue, formData: IFormData) => boolean;
   message: string;
   type?: "required";
 }
@@ -34,8 +34,7 @@ export interface IFormData {
   [name: string]: PrimitiveValue | IFormData | IFormData[];
 }
 
-
-interface IOnSubmitProps {
+interface IOnChangeProps {
   clearModifiedFormData: () => void;
   formData: IFormData;
   modifiedFormData: IFormData;
@@ -48,7 +47,8 @@ interface IForm {
     | ((formChildProps: { submit: () => void }) => React.ReactNode);
   data?: IFormData;
   div?: boolean;
-  onSubmit?: (onSubmitProps: IOnSubmitProps) => void;
+  onChange?: (onChangeProps: IOnChangeProps) => void;
+  onSubmit?: (onSubmitProps: IOnChangeProps) => void;
 }
 
 interface IFormContext {
@@ -83,7 +83,7 @@ interface IFormContext {
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const { children, data = undefined, div = false, onSubmit } = props;
+  const { children, data = undefined, div = false, onChange, onSubmit } = props;
 
   const modifiedFormData = useRef<IFormData>({});
 
@@ -103,6 +103,15 @@ export function Form(props: IForm) {
     }
   };
 
+  const generateOnChangeProps = (setError: boolean): IOnChangeProps => {
+    return {
+      clearModifiedFormData,
+      formData: getFormData() as IFormData,
+      modifiedFormData: modifiedFormData.current,
+      isValid: calculateIsValid(setError),
+    };
+  };
+
   const setFormData = (fieldName: string, value: PrimitiveValue) => {
     const dataToSet = {};
     set(dataToSet, fieldName, value);
@@ -112,6 +121,7 @@ export function Form(props: IForm) {
     dependencies.current?.[fieldName]?.forEach((d) => {
       forceUpdates.current[d]();
     });
+    onChange?.(generateOnChangeProps(false));
   };
 
   const setFormDataWithRerender = (
@@ -195,10 +205,10 @@ export function Form(props: IForm) {
   }) => {
     const validationTriggered = validations.current?.[fieldName]?.find((v) => {
       if (fieldValue) {
-        return v.expression?.(fieldValue);
+        return v.expression?.(fieldValue, getFormData() as IFormData);
       } else {
         const valueToUse = getFormData(fieldName) as PrimitiveValue;
-        return v.expression?.(valueToUse);
+        return v.expression?.(valueToUse, getFormData() as IFormData);
       }
     });
     if (validationTriggered) {
@@ -221,7 +231,6 @@ export function Form(props: IForm) {
   const calculateIsValid = (setError: boolean = false) => {
     const formData = getFormData() as IFormData;
     const allFields = Object.keys(forceUpdates.current);
-
     const containsError = allFields.some((f) => {
       const result = triggerFieldValidation({
         fieldName: f,
@@ -235,13 +244,7 @@ export function Form(props: IForm) {
 
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
-    const formData = getFormData() as IFormData;
-    onSubmit?.({
-      clearModifiedFormData,
-      formData,
-      modifiedFormData: modifiedFormData.current,
-      isValid: calculateIsValid(true),
-    });
+    onSubmit?.(generateOnChangeProps(true));
   };
 
   const childToRender =
