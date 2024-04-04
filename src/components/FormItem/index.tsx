@@ -55,6 +55,10 @@ export function FormItem(props: IFormItem) {
   const focused = useRef<boolean>(false);
 
   const {
+    deregisterError,
+    deregisterForceUpdate,
+    deregisterSetDatas,
+    deregisterValidations,
     getFormData,
     registerDependencies,
     registerError,
@@ -67,9 +71,14 @@ export function FormItem(props: IFormItem) {
   } = useContext(FormContext);
 
   useEffect(() => {
-    registerForceUpdate(name, forceUpdate);
     registerError(name, setError);
+    registerForceUpdate(name, forceUpdate);
     registerSetData(name, setData);
+    return () => {
+      deregisterError(name);
+      deregisterForceUpdate(name);
+      deregisterSetDatas(name);
+    };
   }, [name]);
 
   useEffect(() => {
@@ -112,6 +121,9 @@ export function FormItem(props: IFormItem) {
     } else {
       registerValidations(name, validations ?? []);
     }
+    return () => {
+      deregisterValidations(name);
+    };
   }, [validations]);
 
   const formDataDependency = getFormData(name) ?? "";
@@ -121,6 +133,20 @@ export function FormItem(props: IFormItem) {
       setData(formDataDependency as PrimitiveValue);
     }
   }, [formDataDependency]);
+
+  const handleBlur = (
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    focused.current = false;
+    setFieldValue(event.target.value);
+  };
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    focused.current = true;
+    setData(event.target.value);
+  };
 
   const getFieldValue = (fieldName: string): PrimitiveValue => {
     return getFormData(fieldName) as PrimitiveValue;
@@ -138,20 +164,6 @@ export function FormItem(props: IFormItem) {
 
   const setFormValue = (fieldName: string, fieldValue: PrimitiveValue) => {
     setFormDataWithRerender(fieldName, fieldValue);
-  };
-
-  const handleBlur = (
-    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    focused.current = false;
-    setFieldValue(event.target.value);
-  };
-
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    focused.current = true;
-    setData(event.target.value);
   };
 
   const childProps: IChildProps = {

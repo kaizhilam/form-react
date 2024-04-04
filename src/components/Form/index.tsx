@@ -1,6 +1,6 @@
 import { get, merge, set } from "lodash";
 import React, { createContext, useRef } from "react";
-import { removeDuplicates } from "../../utils";
+import { removeDuplicates, removeUndefinedFromObject } from "../../utils";
 
 export type PrimitiveValue = string | number | boolean;
 
@@ -52,6 +52,10 @@ interface IForm {
 }
 
 interface IFormContext {
+  deregisterError: (fieldName: string) => void;
+  deregisterForceUpdate: (fieldName: string) => void;
+  deregisterSetDatas: (fieldName: string) => void;
+  deregisterValidations: (fieldName: string) => void;
   getFormData: (fieldName?: string) => IFormData | PrimitiveValue;
   registerDependencies: (fieldName: string, dependency: string) => void;
   registerError: (
@@ -93,6 +97,65 @@ export function Form(props: IForm) {
   const setDatas = useRef<ISetDatas>({});
   const validations = useRef<IValidations>({});
 
+  const calculateIsValid = () => {
+    const formData = getFormData() as IFormData;
+    const allFields = Object.keys(forceUpdates.current);
+    const containsError = allFields.some((f) => {
+      const result = triggerFieldValidation({
+        fieldName: f,
+        fieldValue: get(formData, f) as PrimitiveValue,
+      });
+      return result;
+    });
+    return !containsError;
+  };
+
+  const clearModifiedFormData = () => {
+    modifiedFormData.current = {};
+    Object.keys(setDatas.current).forEach((fieldName) => {
+      setDatas.current?.[fieldName](
+        (get(data, fieldName) as PrimitiveValue) ?? ""
+      );
+    });
+  };
+
+  const deregisterError = (fieldName: string) => {
+    errors.current = removeUndefinedFromObject({
+      ...errors.current,
+      [fieldName]: undefined,
+    });
+  };
+
+  const deregisterForceUpdate = (fieldName: string) => {
+    forceUpdates.current = removeUndefinedFromObject({
+      ...forceUpdates.current,
+      [fieldName]: undefined,
+    });
+  };
+
+  const deregisterSetDatas = (fieldName: string) => {
+    setDatas.current = removeUndefinedFromObject({
+      ...setDatas.current,
+      [fieldName]: undefined,
+    });
+  };
+
+  const deregisterValidations = (fieldName: string) => {
+    validations.current = removeUndefinedFromObject({
+      ...validations.current,
+      [fieldName]: undefined,
+    });
+  };
+
+  const generateOnChangeProps = (): IOnChangeProps => {
+    return {
+      clearModifiedFormData,
+      formData: getFormData() as IFormData,
+      modifiedFormData: modifiedFormData.current,
+      isValid: calculateIsValid(),
+    };
+  };
+
   const getFormData = (fieldName?: string): IFormData | PrimitiveValue => {
     const formData = {};
     merge(formData, data, modifiedFormData.current);
@@ -103,13 +166,10 @@ export function Form(props: IForm) {
     }
   };
 
-  const generateOnChangeProps = (setError: boolean): IOnChangeProps => {
-    return {
-      clearModifiedFormData,
-      formData: getFormData() as IFormData,
-      modifiedFormData: modifiedFormData.current,
-      isValid: calculateIsValid(setError),
-    };
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    triggerFormValidation();
+    onSubmit?.(generateOnChangeProps());
   };
 
   const setFormData = (fieldName: string, value: PrimitiveValue) => {
@@ -121,7 +181,7 @@ export function Form(props: IForm) {
     dependencies.current?.[fieldName]?.forEach((d) => {
       forceUpdates.current[d]();
     });
-    onChange?.(generateOnChangeProps(false));
+    onChange?.(generateOnChangeProps());
   };
 
   const setFormDataWithRerender = (
@@ -219,32 +279,14 @@ export function Form(props: IForm) {
     return validationTriggered;
   };
 
-  const clearModifiedFormData = () => {
-    modifiedFormData.current = {};
-    Object.keys(setDatas.current).forEach((fieldName) => {
-      setDatas.current?.[fieldName](
-        (get(data, fieldName) as PrimitiveValue) ?? ""
-      );
-    });
-  };
-
-  const calculateIsValid = (setError: boolean = false) => {
-    const formData = getFormData() as IFormData;
+  const triggerFormValidation = () => {
     const allFields = Object.keys(forceUpdates.current);
-    const containsError = allFields.some((f) => {
-      const result = triggerFieldValidation({
+    allFields.forEach((f) => {
+      triggerFieldValidation({
         fieldName: f,
-        fieldValue: get(formData, f) as PrimitiveValue,
-        setFieldError: setError ? errors.current[f] : undefined,
+        setFieldError: errors.current[f],
       });
-      return result;
     });
-    return !containsError;
-  };
-
-  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
-    e?.preventDefault();
-    onSubmit?.(generateOnChangeProps(true));
   };
 
   const childToRender =
@@ -258,6 +300,10 @@ export function Form(props: IForm) {
     <>
       <FormContext.Provider
         value={{
+          deregisterError,
+          deregisterForceUpdate,
+          deregisterSetDatas,
+          deregisterValidations,
           getFormData,
           registerDependencies,
           registerError,

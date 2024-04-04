@@ -85,6 +85,14 @@ function App() {
                     <FormItem
                       id={`players.${index}.uid`}
                       name={`players.${index}.uid`}
+                      validations={[
+                        {
+                          expression: (data) => {
+                            return parseInt("" + data) % 2 === 0;
+                          },
+                          message: "Cannot be even",
+                        },
+                      ]}
                     >
                       {(props) => {
                         return <TextField {...props} />;
@@ -97,7 +105,7 @@ function App() {
               <Button
                 onClick={() => {
                   // @ts-ignore
-                  setData({ test: "aa" });
+                  setData({ test: "aa", players: [] });
                 }}
               >
                 Shuffle

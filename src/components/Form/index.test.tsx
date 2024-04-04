@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { queryAllByTestId, render, screen } from "@testing-library/react";
 import { Form, IFormData } from ".";
 import { FormItem } from "../FormItem";
 import { act } from "react-dom/test-utils";
@@ -233,6 +233,81 @@ describe("Form", () => {
       act(() => submitButton.click());
       act(() => submitButton.click());
       expect(true).toEqual(true);
+    });
+    it("SHOULD run validation for all fields onSubmit click", () => {
+      render(
+        <Form onSubmit={submit} data={{ test: 2, test2: 2 }}>
+          <FormItem
+            id="test"
+            name="test"
+            validations={[
+              {
+                expression: (data) => {
+                  return parseInt("" + data) % 2 === 0;
+                },
+                message: "Cannot be even",
+              },
+            ]}
+          >
+            {({ name, onChange, onBlur, helperText }) => {
+              return (
+                <>
+                  <input
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    data-testid={name}
+                  />
+                  <span data-testid="helperText">{helperText}</span>
+                </>
+              );
+            }}
+          </FormItem>
+          <FormItem
+            id="test2"
+            name="test2"
+            validations={[
+              {
+                expression: (data) => {
+                  return parseInt("" + data) % 2 === 0;
+                },
+                message: "Cannot be even",
+              },
+            ]}
+          >
+            {({ name, onChange, onBlur, helperText }) => {
+              return (
+                <>
+                  <input
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    data-testid={name}
+                  />
+                  <span data-testid="helperText">{helperText}</span>
+                </>
+              );
+            }}
+          </FormItem>
+          <button type="submit" data-testid="submit">
+            Submit
+          </button>
+        </Form>
+      );
+      const helperTexts = screen.queryAllByTestId("helperText");
+      expect(helperTexts[0].textContent).toEqual("");
+      expect(helperTexts[1].textContent).toEqual("");
+      const submitButton = screen.getByTestId("submit");
+      act(() => submitButton.click());
+      expect(submit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isValid: false,
+          formData: { test: 2, test2: 2 },
+          modifiedFormData: {},
+        })
+      );
+      expect(helperTexts[0].textContent).toEqual("Cannot be even");
+      expect(helperTexts[1].textContent).toEqual("Cannot be even");
     });
   });
 });
