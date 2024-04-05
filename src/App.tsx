@@ -32,9 +32,11 @@ function App() {
           {({ submit }) => (
             <>
               <FormItem
+                id="test"
                 label="test"
                 name="test"
                 helperText="helperText"
+                data-testid="test"
                 validations={[
                   {
                     name: "min",

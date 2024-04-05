@@ -21,6 +21,7 @@ interface IChildProps {
   name: string;
   required: boolean;
   value: PrimitiveValue;
+  [key: string]: any;
 }
 
 interface IChildActions {
@@ -44,8 +45,16 @@ interface IFormItem {
 }
 
 export function FormItem(props: IFormItem) {
-  const { children, disabled, helperText, label, name, required, validations } =
-    props;
+  const {
+    children,
+    disabled,
+    helperText,
+    label,
+    name,
+    required,
+    validations,
+    ...restProps
+  } = props;
 
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
@@ -90,8 +99,10 @@ export function FormItem(props: IFormItem) {
         {
           type: "required",
           message: "This field is required.",
-          expression: (data) =>
-            data === "" || data === undefined || data === null,
+          expression: (validationData) =>
+            validationData === "" ||
+            validationData === undefined ||
+            validationData === null,
         },
         ...(validations ?? []),
       ]);
@@ -102,8 +113,10 @@ export function FormItem(props: IFormItem) {
         {
           type: "required",
           message: requiredValidation.message,
-          expression: (data) =>
-            data === "" || data === undefined || data === null,
+          expression: (validationData) =>
+            validationData === "" ||
+            validationData === undefined ||
+            validationData === null,
         },
         ...cleanValidation,
       ]);
@@ -114,8 +127,10 @@ export function FormItem(props: IFormItem) {
         {
           type: "required",
           message: requiredValidation.message,
-          expression: (data) =>
-            data === "" || data === undefined || data === null,
+          expression: (validationData) =>
+            validationData === "" ||
+            validationData === undefined ||
+            validationData === null,
         },
         ...cleanValidation,
       ]);
@@ -140,7 +155,7 @@ export function FormItem(props: IFormItem) {
   ) => {
     focused.current = false;
     setFieldValue(event.target.value);
-    registerFocusedKeyValuePair(undefined)
+    registerFocusedKeyValuePair(undefined);
   };
 
   const handleChange = (
@@ -179,6 +194,7 @@ export function FormItem(props: IFormItem) {
     name,
     required: !!required || !!validations?.find((v) => v.type === "required"),
     value: data,
+    ...restProps,
   };
 
   const childActions: IChildActions = {
