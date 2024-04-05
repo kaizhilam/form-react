@@ -22,6 +22,11 @@ interface IForceUpdates {
   [key: string]: () => void;
 }
 
+interface IFocusKeyValue {
+  fieldName: string | undefined;
+  fieldValue: PrimitiveValue | undefined;
+}
+
 interface ISetDatas {
   [key: string]: (data: PrimitiveValue) => void;
 }
@@ -62,6 +67,10 @@ interface IFormContext {
     fieldName: string,
     setError: (errorMessage: string) => void
   ) => void;
+  registerFocusedKeyValuePair: (
+    fieldName: string | undefined,
+    value?: PrimitiveValue
+  ) => void;
   registerForceUpdate: (fieldName: string, forceUpdate: () => void) => void;
   registerSetData: (
     fieldName: string,
@@ -93,6 +102,10 @@ export function Form(props: IForm) {
 
   const dependencies = useRef<IDependencies>({});
   const errors = useRef<IErrors>({});
+  const focusedKeyValuePair = useRef<IFocusKeyValue>({
+    fieldName: undefined,
+    fieldValue: undefined,
+  });
   const forceUpdates = useRef<IForceUpdates>({});
   const setDatas = useRef<ISetDatas>({});
   const validations = useRef<IValidations>({});
@@ -168,6 +181,15 @@ export function Form(props: IForm) {
 
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
+    if (
+      focusedKeyValuePair.current.fieldName !== undefined &&
+      focusedKeyValuePair.current.fieldValue !== undefined
+    ) {
+      setFormData(
+        focusedKeyValuePair.current.fieldName,
+        focusedKeyValuePair.current.fieldValue
+      );
+    }
     triggerFormValidation();
     onSubmit?.(generateOnChangeProps());
   };
@@ -225,6 +247,20 @@ export function Form(props: IForm) {
       ...errors.current,
       [fieldName]: setError,
     };
+  };
+
+  const registerFocusedKeyValuePair = (
+    fieldName: string | undefined,
+    value?: PrimitiveValue
+  ) => {
+    if (fieldName === undefined) {
+      focusedKeyValuePair.current = {
+        fieldName: undefined,
+        fieldValue: undefined,
+      };
+    } else if (fieldName !== undefined && value !== undefined) {
+      focusedKeyValuePair.current = { fieldName: fieldName, fieldValue: value };
+    }
   };
 
   const registerForceUpdate = (fieldName: string, forceUpdate: () => void) => {
@@ -307,6 +343,7 @@ export function Form(props: IForm) {
           getFormData,
           registerDependencies,
           registerError,
+          registerFocusedKeyValuePair,
           registerForceUpdate,
           registerSetData,
           registerValidations,

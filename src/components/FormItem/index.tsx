@@ -62,6 +62,7 @@ export function FormItem(props: IFormItem) {
     getFormData,
     registerDependencies,
     registerError,
+    registerFocusedKeyValuePair,
     registerForceUpdate,
     registerSetData,
     registerValidations,
@@ -139,6 +140,7 @@ export function FormItem(props: IFormItem) {
   ) => {
     focused.current = false;
     setFieldValue(event.target.value);
+    registerFocusedKeyValuePair(undefined)
   };
 
   const handleChange = (
@@ -146,6 +148,7 @@ export function FormItem(props: IFormItem) {
   ) => {
     focused.current = true;
     setData(event.target.value);
+    registerFocusedKeyValuePair(name, event.target.value);
   };
 
   const getFieldValue = (fieldName: string): PrimitiveValue => {

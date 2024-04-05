@@ -1,9 +1,14 @@
 import React from "react";
-import { queryAllByTestId, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { Form, IFormData } from ".";
 import { FormItem } from "../FormItem";
 import { act } from "react-dom/test-utils";
 import { simulateUserChange } from "../../utils/testUtils";
+import userEvent from "@testing-library/user-event";
 
 describe("Form", () => {
   describe("render child", () => {
@@ -182,7 +187,7 @@ describe("Form", () => {
         })
       );
     });
-    it("SHOULD show modifiedData", async () => {
+    it("SHOULD show modifiedData", () => {
       renderComponent({ test: "111" });
       const input = screen.getByTestId("test");
       simulateUserChange(input, { target: { value: "testValue" } });
@@ -308,6 +313,18 @@ describe("Form", () => {
       );
       expect(helperTexts[0].textContent).toEqual("Cannot be even");
       expect(helperTexts[1].textContent).toEqual("Cannot be even");
+    });
+    it("SHOULD submit with enter on form with the correct data", () => {
+      renderComponent();
+      const input = screen.getByTestId("test");
+      fireEvent.focus(input);
+      userEvent.type(input, "testValue{enter}");
+      expect(submit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formData: { test: "testValue" },
+          modifiedFormData: { test: "testValue" },
+        })
+      );
     });
   });
 });

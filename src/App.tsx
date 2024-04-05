@@ -4,7 +4,7 @@ import { Button, Switch, TextField } from "@mui/material";
 
 function App() {
   const [data, setData] = useState({
-    players: Array.from(Array(100).keys()).map((e) => ({ uid: e })),
+    players: Array.from(Array(1).keys()).map((e) => ({ uid: e })),
     test: 0,
   });
   return (
