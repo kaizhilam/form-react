@@ -11,6 +11,7 @@ function App() {
     <>
       <div className="App">
         <Form
+          wrapper={<div />}
           onChange={(e) => {
             console.log("onChange", e);
           }}

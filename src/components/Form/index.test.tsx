@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Form, IFormData } from ".";
 import { FormItem } from "../FormItem";
 import { act } from "react-dom/test-utils";
@@ -46,37 +42,71 @@ describe("Form", () => {
         </body>
       `);
     });
-    it("SHOULD render as form", () => {
-      const { baseElement } = render(
-        <Form>{() => <span>hello world</span>}</Form>
-      );
-      expect(baseElement).toMatchInlineSnapshot(`
-        <body>
-          <div>
-            <form>
+    describe("Wrapper", () => {
+      it("SHOULD render as form", () => {
+        const { baseElement } = render(
+          <Form>{() => <span>hello world</span>}</Form>
+        );
+        expect(baseElement).toMatchInlineSnapshot(`
+          <body>
+            <div>
+              <form>
+                <span>
+                  hello world
+                </span>
+              </form>
+            </div>
+          </body>
+        `);
+      });
+      it("SHOULD render as div when wrapper is div", () => {
+        const { baseElement } = render(
+          <Form wrapper={<div />}>{() => <span>hello world</span>}</Form>
+        );
+        expect(baseElement).toMatchInlineSnapshot(`
+          <body>
+            <div>
+              <div>
+                <span>
+                  hello world
+                </span>
+              </div>
+            </div>
+          </body>
+        `);
+      });
+      it("SHOULD render as span when wrapper is span", () => {
+        const { baseElement } = render(
+          <Form wrapper={<span />}>{() => <span>hello world</span>}</Form>
+        );
+        expect(baseElement).toMatchInlineSnapshot(`
+          <body>
+            <div>
               <span>
-                hello world
+                <span>
+                  hello world
+                </span>
               </span>
-            </form>
-          </div>
-        </body>
-      `);
-    });
-    it("SHOULD render as div", () => {
-      const { baseElement } = render(
-        <Form div>{() => <span>hello world</span>}</Form>
-      );
-      expect(baseElement).toMatchInlineSnapshot(`
-        <body>
-          <div>
+            </div>
+          </body>
+        `);
+      });
+      it("SHOULD render as React fragment when wrapper is React fragment", () => {
+        const { baseElement } = render(
+          <Form wrapper={<React.Fragment />}>
+            {() => <span>hello world</span>}
+          </Form>
+        );
+        expect(baseElement).toMatchInlineSnapshot(`
+          <body>
             <div>
               <span>
                 hello world
               </span>
             </div>
-          </div>
-        </body>
-      `);
+          </body>
+        `);
+      });
     });
   });
   describe("onChange", () => {

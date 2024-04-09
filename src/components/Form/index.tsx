@@ -51,7 +51,7 @@ interface IForm {
     | React.ReactNode
     | ((formChildProps: { submit: () => void }) => React.ReactNode);
   data?: IFormData;
-  div?: boolean;
+  wrapper?: React.ReactElement;
   onChange?: (onChangeProps: IOnChangeProps) => void;
   onSubmit?: (onSubmitProps: IOnChangeProps) => void;
 }
@@ -96,7 +96,7 @@ interface IFormContext {
 export const FormContext = createContext<IFormContext>({} as IFormContext);
 
 export function Form(props: IForm) {
-  const { children, data = undefined, div = false, onChange, onSubmit } = props;
+  const { children, data = undefined, wrapper, onChange, onSubmit } = props;
 
   const modifiedFormData = useRef<IFormData>({});
 
@@ -352,10 +352,10 @@ export function Form(props: IForm) {
           triggerFieldValidation,
         }}
       >
-        {div ? (
-          <div children={childToRender} />
+        {!!wrapper ? (
+          React.cloneElement(wrapper, { children: childToRender })
         ) : (
-          <form onSubmit={handleSubmit} children={childToRender} />
+          <form onSubmit={handleSubmit}>{childToRender}</form>
         )}
       </FormContext.Provider>
     </>
