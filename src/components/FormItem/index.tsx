@@ -26,6 +26,7 @@ interface IChildProps {
 
 interface IChildActions {
   getFieldValue: (fieldName: string) => PrimitiveValue;
+  formIsValid: boolean;
   setFieldValue: (fieldValue: PrimitiveValue) => void;
   setFormValue: (fieldName: string, fieldValue: PrimitiveValue) => void;
 }
@@ -60,15 +61,18 @@ export function FormItem(props: IFormItem) {
 
   const [data, setData] = useState<PrimitiveValue>("");
   const [error, setError] = useState<string>("");
+  const [firstRender, setFirstRender] = useState<boolean>(true);
 
   const focused = useRef<boolean>(false);
 
   const {
+    calculateIsValid,
     deregisterError,
     deregisterForceUpdate,
     deregisterSetDatas,
     deregisterValidations,
     getFormData,
+    registerAlwaysUpdate,
     registerDependencies,
     registerError,
     registerFocusedKeyValuePair,
@@ -79,6 +83,11 @@ export function FormItem(props: IFormItem) {
     setFormDataWithRerender,
     triggerFieldValidation,
   } = useContext(FormContext);
+
+  useEffect(() => {
+    // console.log("first render");
+    setFirstRender(false);
+  }, []);
 
   useEffect(() => {
     registerError(name, setError);
@@ -201,6 +210,10 @@ export function FormItem(props: IFormItem) {
     getFieldValue: (fieldName) => {
       registerDependencies(name, fieldName);
       return getFieldValue(fieldName);
+    },
+    get formIsValid() {
+      firstRender && registerAlwaysUpdate(name);
+      return calculateIsValid();
     },
     setFieldValue,
     setFormValue,

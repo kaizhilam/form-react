@@ -519,6 +519,85 @@ describe("FormItem", () => {
         expect(spanShow).toBeInTheDocument();
       });
     });
+    describe("formIsValid", () => {
+      it("SHOULD show formIsValid on render", () => {
+        render(
+          <Form data={{ test: "notValid" }}>
+            <FormItem name="check">
+              {(_, { formIsValid }) => (
+                <div data-testid="check">{formIsValid.toString()}</div>
+              )}
+            </FormItem>
+            <FormItem
+              name="test"
+              validations={[
+                {
+                  message: "Not valid",
+                  expression: (data) => {
+                    return data === "notValid";
+                  },
+                },
+              ]}
+            >
+              {({ name, onChange, onBlur, value }) => (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  data-testid={name}
+                  value={value as string}
+                />
+              )}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              Submit
+            </button>
+          </Form>
+        );
+        const check = screen.getByTestId("check");
+        expect(check.textContent).toEqual("false");
+      });
+      it("SHOULD show formIsValid false on data change", () => {
+        render(
+          <Form>
+            <FormItem name="check">
+              {(_, { formIsValid }) => (
+                <div data-testid="check">{formIsValid.toString()}</div>
+              )}
+            </FormItem>
+            <FormItem
+              name="test"
+              validations={[
+                {
+                  message: "Not valid",
+                  expression: (data) => {
+                    return data === "notValid";
+                  },
+                },
+              ]}
+            >
+              {({ name, onChange, onBlur, value }) => (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  data-testid={name}
+                  value={value as string}
+                />
+              )}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              Submit
+            </button>
+          </Form>
+        );
+        const check = screen.getByTestId("check");
+        expect(check.textContent).toEqual("true");
+        const test = screen.getByTestId("test");
+        simulateUserChange(test, { target: { value: "notValid" } });
+        expect(check.textContent).toEqual("false");
+      });
+    });
     describe("setFieldValue", () => {
       it("SHOULD setFieldValue", () => {
         const submit = jest.fn();

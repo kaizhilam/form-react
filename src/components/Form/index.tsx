@@ -57,11 +57,13 @@ interface IForm {
 }
 
 interface IFormContext {
+  calculateIsValid: () => boolean;
   deregisterError: (fieldName: string) => void;
   deregisterForceUpdate: (fieldName: string) => void;
   deregisterSetDatas: (fieldName: string) => void;
   deregisterValidations: (fieldName: string) => void;
   getFormData: (fieldName?: string) => IFormData | PrimitiveValue;
+  registerAlwaysUpdate: (fieldName: string) => void;
   registerDependencies: (fieldName: string, dependency: string) => void;
   registerError: (
     fieldName: string,
@@ -100,6 +102,7 @@ export function Form(props: IForm) {
 
   const modifiedFormData = useRef<IFormData>({});
 
+  const alwaysUpdate = useRef<string[]>([]);
   const dependencies = useRef<IDependencies>({});
   const errors = useRef<IErrors>({});
   const focusedKeyValuePair = useRef<IFocusKeyValue>({
@@ -191,6 +194,9 @@ export function Form(props: IForm) {
       );
     }
     triggerFormValidation();
+    alwaysUpdate.current.forEach((key) => {
+      forceUpdates.current[key]();
+    });
     onSubmit?.(generateOnChangeProps());
   };
 
@@ -202,6 +208,9 @@ export function Form(props: IForm) {
     modifiedFormData.current = dataToMerge;
     dependencies.current?.[fieldName]?.forEach((d) => {
       forceUpdates.current[d]();
+    });
+    alwaysUpdate.current.forEach((name) => {
+      forceUpdates.current[name]();
     });
     onChange?.(generateOnChangeProps());
   };
@@ -218,6 +227,12 @@ export function Form(props: IForm) {
         setFieldError: errors.current[fieldName],
       });
       forceUpdates.current?.[fieldName]?.();
+    }
+  };
+
+  const registerAlwaysUpdate = (fieldName: string) => {
+    if (!alwaysUpdate.current.find((n) => n === fieldName)) {
+      alwaysUpdate.current = [...alwaysUpdate.current, fieldName];
     }
   };
 
@@ -336,11 +351,13 @@ export function Form(props: IForm) {
     <>
       <FormContext.Provider
         value={{
+          calculateIsValid,
           deregisterError,
           deregisterForceUpdate,
           deregisterSetDatas,
           deregisterValidations,
           getFormData,
+          registerAlwaysUpdate,
           registerDependencies,
           registerError,
           registerFocusedKeyValuePair,

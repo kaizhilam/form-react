@@ -32,6 +32,14 @@ function App() {
         >
           {({ submit }) => (
             <>
+              <FormItem id="check" name="check">
+                {(props, { formIsValid }) => (
+                  <>
+                    <div>{formIsValid.toString()}</div>
+                  </>
+                )}
+              </FormItem>
+              <br />
               <FormItem
                 id="test"
                 label="test"
