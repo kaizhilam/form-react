@@ -26,7 +26,6 @@ interface IChildProps {
 
 interface IChildActions {
   getFieldValue: (fieldName: string) => PrimitiveValue;
-  formIsValid: boolean;
   setFieldValue: (fieldValue: PrimitiveValue) => void;
   setFormValue: (fieldName: string, fieldValue: PrimitiveValue) => void;
 }
@@ -61,23 +60,16 @@ export function FormItem(props: IFormItem) {
 
   const [data, setData] = useState<PrimitiveValue>("");
   const [error, setError] = useState<string>("");
-  const [firstRender, setFirstRender] = useState<boolean>(true);
 
   const focused = useRef<boolean>(false);
 
   const {
-    calculateIsValid,
-    deregisterError,
-    deregisterForceUpdate,
-    deregisterSetDatas,
+    deregisterNameDependencies,
     deregisterValidations,
     getFormData,
-    registerAlwaysUpdate,
     registerDependencies,
-    registerError,
     registerFocusedKeyValuePair,
-    registerForceUpdate,
-    registerSetData,
+    registerNameDependencies,
     registerValidations,
     setFormData,
     setFormDataWithRerender,
@@ -85,18 +77,14 @@ export function FormItem(props: IFormItem) {
   } = useContext(FormContext);
 
   useEffect(() => {
-    // console.log("first render");
-    setFirstRender(false);
-  }, []);
-
-  useEffect(() => {
-    registerError(name, setError);
-    registerForceUpdate(name, forceUpdate);
-    registerSetData(name, setData);
+    registerNameDependencies({
+      fieldName: name,
+      setData,
+      setError,
+      forceUpdate,
+    });
     return () => {
-      deregisterError(name);
-      deregisterForceUpdate(name);
-      deregisterSetDatas(name);
+      deregisterNameDependencies(name);
     };
   }, [name]);
 
@@ -151,14 +139,6 @@ export function FormItem(props: IFormItem) {
     };
   }, [validations]);
 
-  const formDataDependency = getFormData(name) ?? "";
-  useEffect(() => {
-    if (formDataDependency !== data && !focused.current) {
-      // console.log("run prepop ", name);
-      setData(formDataDependency as PrimitiveValue);
-    }
-  }, [formDataDependency]);
-
   const handleBlur = (
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -210,10 +190,6 @@ export function FormItem(props: IFormItem) {
     getFieldValue: (fieldName) => {
       registerDependencies(name, fieldName);
       return getFieldValue(fieldName);
-    },
-    get formIsValid() {
-      firstRender && registerAlwaysUpdate(name);
-      return calculateIsValid();
     },
     setFieldValue,
     setFormValue,

@@ -4,7 +4,7 @@ import { Button, Switch, TextField } from "@mui/material";
 
 function App() {
   const [data, setData] = useState({
-    players: Array.from(Array(1).keys()).map((e) => ({ uid: e })),
+    players: Array.from(Array(0).keys()).map((e) => ({ uid: e })),
     test: 0,
   });
   return (
@@ -30,102 +30,98 @@ function App() {
           }}
           data={data}
         >
-          {({ submit }) => (
-            <>
-              <FormItem id="check" name="check">
-                {(props, { formIsValid }) => (
-                  <>
-                    <div>{formIsValid.toString()}</div>
-                  </>
-                )}
-              </FormItem>
-              <br />
-              <FormItem
-                id="test"
-                label="test"
-                name="test"
-                helperText="helperText"
-                data-testid="test"
-                validations={[
-                  {
-                    name: "min",
-                    expression: (data) => {
-                      return data === "aa";
+          {({ submit, isValid }) => {
+            // console.log("isValid", isValid);
+            return (
+              <>
+                {isValid && <div>Valid</div>}
+                <FormItem
+                  id="test"
+                  label="test"
+                  name="test"
+                  helperText="helperText"
+                  data-testid="test"
+                  validations={[
+                    {
+                      name: "min",
+                      expression: (data) => {
+                        return data === "aa";
+                      },
+                      message: "min",
                     },
-                    message: "min",
-                  },
-                  {
-                    type: "required",
-                    message: "hehehe",
-                  },
-                ]}
-              >
-                {(props, { setFieldValue }) => {
-                  return <TextField {...props} />;
-                }}
-              </FormItem>
-              <br />
-              <FormItem label="showHide" name="showHide">
-                {(props, { setFieldValue }) => {
+                    {
+                      type: "required",
+                      message: "hehehe",
+                    },
+                  ]}
+                >
+                  {(props, { setFieldValue }) => {
+                    return <TextField {...props} />;
+                  }}
+                </FormItem>
+                <br />
+                <FormItem label="showHide" name="showHide">
+                  {(props, { setFieldValue }) => {
+                    return (
+                      <Switch
+                        checked={props.value === "show"}
+                        onClick={() => {
+                          if (props.value === "show") {
+                            setFieldValue("hide");
+                          } else {
+                            setFieldValue("show");
+                          }
+                        }}
+                      />
+                    );
+                  }}
+                </FormItem>
+                <FormItem name="showHideSpan">
+                  {(props, { getFieldValue, setFormValue }) => {
+                    const showHide = getFieldValue("showHide");
+                    if (showHide === "show") {
+                      return <span>Show</span>;
+                    }
+                  }}
+                </FormItem>
+                <br />
+                {data.players.map((e, index) => {
                   return (
-                    <Switch
-                      checked={props.value === "show"}
-                      onClick={() => {
-                        if (props.value === "show") {
-                          setFieldValue("hide");
-                        } else {
-                          setFieldValue("show");
-                        }
-                      }}
-                    />
-                  );
-                }}
-              </FormItem>
-              <FormItem name="showHideSpan">
-                {(props, { getFieldValue, setFormValue }) => {
-                  const showHide = getFieldValue("showHide");
-                  if (showHide === "show") {
-                    return <span>Show</span>;
-                  }
-                }}
-              </FormItem>
-              <br />
-              {data.players.map((e, index) => {
-                return (
-                  <React.Fragment key={e.uid}>
-                    <FormItem
-                      id={`players.${index}.uid`}
-                      name={`players.${index}.uid`}
-                      validations={[
-                        {
-                          expression: (data) => {
-                            return parseInt("" + data) % 2 === 0;
+                    <React.Fragment key={e.uid}>
+                      <FormItem
+                        id={`players.${index}.uid`}
+                        name={`players.${index}.uid`}
+                        validations={[
+                          {
+                            expression: (data) => {
+                              return parseInt("" + data) % 2 === 0;
+                            },
+                            message: "Cannot be even",
                           },
-                          message: "Cannot be even",
-                        },
-                      ]}
-                    >
-                      {(props) => {
-                        return <TextField {...props} />;
-                      }}
-                    </FormItem>
-                    <br />
-                  </React.Fragment>
-                );
-              })}
-              <Button
-                onClick={() => {
-                  // @ts-ignore
-                  setData({ test: "aa", players: [] });
-                }}
-              >
-                Shuffle
-              </Button>
-              <br />
-              <Button type="submit">Form submit</Button>
-              <Button onClick={submit}>Normal submit</Button>
-            </>
-          )}
+                        ]}
+                      >
+                        {(props) => {
+                          return <TextField {...props} />;
+                        }}
+                      </FormItem>
+                      <br />
+                    </React.Fragment>
+                  );
+                })}
+                <Button
+                  onClick={() => {
+                    // @ts-ignore
+                    setData({ test: "aa", players: [] });
+                  }}
+                >
+                  Shuffle
+                </Button>
+                <br />
+                <Button type="submit">Form submit</Button>
+                <Button onClick={submit}>Normal submit</Button>
+              </>
+            );
+          }}
         </Form>
       </div>
     </>

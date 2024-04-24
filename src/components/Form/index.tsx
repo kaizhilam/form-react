@@ -1,6 +1,16 @@
-import { get, merge, set } from "lodash";
-import React, { createContext, useRef } from "react";
-import { removeDuplicates, removeUndefinedFromObject } from "../../utils";
+import { get, set } from "lodash";
+import React, {
+  createContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "react";
+import {
+  flattenObject,
+  removeDuplicates,
+  removeUndefinedFromObject,
+} from "../../utils";
 
 export type PrimitiveValue = string | number | boolean;
 
@@ -15,9 +25,14 @@ interface IDependencies {
   [key: string]: string[];
 }
 
-interface IErrors {
+interface ISetErrors {
   [key: string]: (errorMessage: string) => void;
 }
+
+interface IFieldWithError {
+  [key: string]: boolean;
+}
+
 interface IForceUpdates {
   [key: string]: () => void;
 }
@@ -25,6 +40,13 @@ interface IForceUpdates {
 interface IFocusKeyValue {
   fieldName: string | undefined;
   fieldValue: PrimitiveValue | undefined;
+}
+
+interface IRegisterNameDependenciesParam {
+  fieldName: string;
+  setError: (error: string) => void;
+  forceUpdate: () => void;
+  setData: (data: PrimitiveValue) => void;
 }
 
 interface ISetDatas {
@@ -39,6 +61,10 @@ export interface IFormData {
   [name: string]: PrimitiveValue | IFormData | IFormData[];
 }
 
+interface IModifiedFormData {
+  [name: string]: PrimitiveValue;
+}
+
 interface IOnChangeProps {
   clearModifiedFormData: () => void;
   formData: IFormData;
@@ -49,7 +75,10 @@ interface IOnChangeProps {
 interface IForm {
   children:
     | React.ReactNode
-    | ((formChildProps: { submit: () => void }) => React.ReactNode);
+    | ((formChildProps: {
+        submit: () => void;
+        isValid: boolean;
+      }) => React.ReactNode);
   data?: IFormData;
   wrapper?: React.ReactElement;
   onChange?: (onChangeProps: IOnChangeProps) => void;
@@ -57,27 +86,15 @@ interface IForm {
 }
 
 interface IFormContext {
-  calculateIsValid: () => boolean;
-  deregisterError: (fieldName: string) => void;
-  deregisterForceUpdate: (fieldName: string) => void;
-  deregisterSetDatas: (fieldName: string) => void;
+  deregisterNameDependencies: (fieldName: string) => void;
   deregisterValidations: (fieldName: string) => void;
   getFormData: (fieldName?: string) => IFormData | PrimitiveValue;
-  registerAlwaysUpdate: (fieldName: string) => void;
   registerDependencies: (fieldName: string, dependency: string) => void;
-  registerError: (
-    fieldName: string,
-    setError: (errorMessage: string) => void
-  ) => void;
   registerFocusedKeyValuePair: (
     fieldName: string | undefined,
     value?: PrimitiveValue
   ) => void;
-  registerForceUpdate: (fieldName: string, forceUpdate: () => void) => void;
-  registerSetData: (
-    fieldName: string,
-    setData: (data: PrimitiveValue) => void
-  ) => void;
+  registerNameDependencies: (param: IRegisterNameDependenciesParam) => void;
   registerValidations: (
     fieldName: string,
     fieldValidations: IFieldValidation[]
@@ -100,17 +117,29 @@ export const FormContext = createContext<IFormContext>({} as IFormContext);
 export function Form(props: IForm) {
   const { children, data = undefined, wrapper, onChange, onSubmit } = props;
 
-  const modifiedFormData = useRef<IFormData>({});
+  const [, forceFormUpdate] = useReducer((x) => x + 1, 0);
+
+  const prepopData = useMemo(() => {
+    // console.log("prepop update");
+    if (data !== undefined) {
+      return flattenObject(data);
+    } else {
+      return {};
+    }
+  }, [data]);
+  const modifiedFormData = useRef<IModifiedFormData>({});
 
   const alwaysUpdate = useRef<string[]>([]);
   const dependencies = useRef<IDependencies>({});
-  const errors = useRef<IErrors>({});
+  const fieldWithError = useRef<IFieldWithError>({});
   const focusedKeyValuePair = useRef<IFocusKeyValue>({
     fieldName: undefined,
     fieldValue: undefined,
   });
   const forceUpdates = useRef<IForceUpdates>({});
+  const isValid = useRef<boolean>(true);
   const setDatas = useRef<ISetDatas>({});
+  const setErrors = useRef<ISetErrors>({});
   const validations = useRef<IValidations>({});
 
   const calculateIsValid = () => {
@@ -130,28 +159,26 @@ export function Form(props: IForm) {
     modifiedFormData.current = {};
     Object.keys(setDatas.current).forEach((fieldName) => {
       setDatas.current?.[fieldName](
-        (get(data, fieldName) as PrimitiveValue) ?? ""
+        (prepopData[fieldName] as PrimitiveValue) ?? ""
       );
     });
   };
 
-  const deregisterError = (fieldName: string) => {
-    errors.current = removeUndefinedFromObject({
-      ...errors.current,
-      [fieldName]: undefined,
-    });
-  };
-
-  const deregisterForceUpdate = (fieldName: string) => {
+  const deregisterNameDependencies = (fieldName: string) => {
     forceUpdates.current = removeUndefinedFromObject({
       ...forceUpdates.current,
       [fieldName]: undefined,
     });
-  };
-
-  const deregisterSetDatas = (fieldName: string) => {
     setDatas.current = removeUndefinedFromObject({
       ...setDatas.current,
+      [fieldName]: undefined,
+    });
+    setErrors.current = removeUndefinedFromObject({
+      ...setErrors.current,
+      [fieldName]: undefined,
+    });
+    fieldWithError.current = removeUndefinedFromObject({
+      ...fieldWithError.current,
       [fieldName]: undefined,
     });
   };
@@ -164,19 +191,28 @@ export function Form(props: IForm) {
   };
 
   const generateOnChangeProps = (): IOnChangeProps => {
+    const modifiedFormDataToReturn = {};
+    Object.keys(modifiedFormData.current).forEach((key) => {
+      set(modifiedFormDataToReturn, key, modifiedFormData.current[key]);
+    });
     return {
       clearModifiedFormData,
       formData: getFormData() as IFormData,
-      modifiedFormData: modifiedFormData.current,
+      modifiedFormData: modifiedFormDataToReturn,
       isValid: calculateIsValid(),
     };
   };
 
   const getFormData = (fieldName?: string): IFormData | PrimitiveValue => {
-    const formData = {};
-    merge(formData, data, modifiedFormData.current);
+    const formData: IFormData = {};
+    Object.keys(prepopData).forEach((k) => {
+      set(formData, k, prepopData[k]);
+    });
+    Object.keys(modifiedFormData.current).forEach((k) => {
+      set(formData, k, modifiedFormData.current[k]);
+    });
     if (fieldName) {
-      return get(formData, fieldName);
+      return get(formData, fieldName) as IFormData | PrimitiveValue;
     } else {
       return formData;
     }
@@ -200,40 +236,24 @@ export function Form(props: IForm) {
     onSubmit?.(generateOnChangeProps());
   };
 
-  const setFormData = (fieldName: string, value: PrimitiveValue) => {
-    const dataToSet = {};
-    set(dataToSet, fieldName, value);
-    const dataToMerge = modifiedFormData.current;
-    merge(dataToMerge, dataToSet);
-    modifiedFormData.current = dataToMerge;
-    dependencies.current?.[fieldName]?.forEach((d) => {
-      forceUpdates.current[d]();
-    });
-    alwaysUpdate.current.forEach((name) => {
-      forceUpdates.current[name]();
-    });
-    onChange?.(generateOnChangeProps());
-  };
-
-  const setFormDataWithRerender = (
-    fieldName: string,
-    value: PrimitiveValue
-  ) => {
-    if (getFormData(fieldName) !== value) {
-      setFormData(fieldName, value);
-      triggerFieldValidation({
-        fieldName,
-        fieldValue: value,
-        setFieldError: errors.current[fieldName],
-      });
-      forceUpdates.current?.[fieldName]?.();
-    }
-  };
-
-  const registerAlwaysUpdate = (fieldName: string) => {
-    if (!alwaysUpdate.current.find((n) => n === fieldName)) {
-      alwaysUpdate.current = [...alwaysUpdate.current, fieldName];
-    }
+  const registerNameDependencies = (param: IRegisterNameDependenciesParam) => {
+    const { fieldName, forceUpdate, setData, setError } = param;
+    forceUpdates.current = {
+      ...forceUpdates.current,
+      [fieldName]: forceUpdate,
+    };
+    setDatas.current = {
+      ...setDatas.current,
+      [fieldName]: setData,
+    };
+    setErrors.current = {
+      ...setErrors.current,
+      [fieldName]: setError,
+    };
+    fieldWithError.current = {
+      ...fieldWithError.current,
+      [fieldName]: false,
+    };
   };
 
   const registerDependencies = (fieldName: string, dependency: string) => {
@@ -254,16 +274,6 @@ export function Form(props: IForm) {
     }
   };
 
-  const registerError = (
-    fieldName: string,
-    setError: (errorMessage: string) => void
-  ) => {
-    errors.current = {
-      ...errors.current,
-      [fieldName]: setError,
-    };
-  };
-
   const registerFocusedKeyValuePair = (
     fieldName: string | undefined,
     value?: PrimitiveValue
@@ -278,23 +288,6 @@ export function Form(props: IForm) {
     }
   };
 
-  const registerForceUpdate = (fieldName: string, forceUpdate: () => void) => {
-    forceUpdates.current = {
-      ...forceUpdates.current,
-      [fieldName]: forceUpdate,
-    };
-  };
-
-  const registerSetData = (
-    fieldName: string,
-    setData: (data: PrimitiveValue) => void
-  ) => {
-    setDatas.current = {
-      ...setDatas.current,
-      [fieldName]: setData,
-    };
-  };
-
   const registerValidations = (
     fieldName: string,
     fieldValidations: IFieldValidation[]
@@ -303,6 +296,33 @@ export function Form(props: IForm) {
       ...validations.current,
       [fieldName]: fieldValidations,
     };
+  };
+
+  const setFormData = (fieldName: string, value: PrimitiveValue) => {
+    modifiedFormData.current[fieldName] = value;
+    dependencies.current?.[fieldName]?.forEach((d) => {
+      forceUpdates.current[d]();
+    });
+    alwaysUpdate.current.forEach((name) => {
+      forceUpdates.current[name]();
+    });
+    onChange?.(generateOnChangeProps());
+  };
+
+  const setFormDataWithRerender = (
+    fieldName: string,
+    value: PrimitiveValue
+  ) => {
+    if (getFormData(fieldName) !== value) {
+      setFormData(fieldName, value);
+      setDatas.current?.[fieldName]?.(value);
+      triggerFieldValidation({
+        fieldName,
+        fieldValue: value,
+        setFieldError: setErrors.current[fieldName],
+      });
+      forceUpdates.current?.[fieldName]?.();
+    }
   };
 
   const triggerFieldValidation = ({
@@ -318,14 +338,28 @@ export function Form(props: IForm) {
       if (fieldValue) {
         return v.expression?.(fieldValue, getFormData() as IFormData);
       } else {
-        const valueToUse = getFormData(fieldName) as PrimitiveValue;
+        const valueToUse = (modifiedFormData.current?.[fieldName] ??
+          prepopData?.[fieldName]) as PrimitiveValue;
         return v.expression?.(valueToUse, getFormData() as IFormData);
       }
     });
     if (validationTriggered) {
       setFieldError?.(validationTriggered.message);
+      fieldWithError.current = {
+        ...fieldWithError.current,
+        [fieldName]: true,
+      };
     } else {
       setFieldError?.("");
+      fieldWithError.current = {
+        ...fieldWithError.current,
+        [fieldName]: false,
+      };
+    }
+    const newIsValid = !Object.values(fieldWithError.current).some((v) => !!v);
+    if (isValid.current !== newIsValid) {
+      isValid.current = newIsValid;
+      forceFormUpdate();
     }
     return validationTriggered;
   };
@@ -335,34 +369,40 @@ export function Form(props: IForm) {
     allFields.forEach((f) => {
       triggerFieldValidation({
         fieldName: f,
-        setFieldError: errors.current[f],
+        setFieldError: setErrors.current[f],
       });
     });
   };
+
+  useEffect(() => {
+    Object.keys(prepopData).forEach((k) => {
+      setDatas.current[k](prepopData[k]);
+    });
+    calculateIsValid();
+  }, []);
 
   const childToRender =
     typeof children === "function"
       ? children({
           submit: handleSubmit,
+          get isValid() {
+            return isValid.current;
+          },
         })
       : children;
+
+  // console.log("render form");
 
   return (
     <>
       <FormContext.Provider
         value={{
-          calculateIsValid,
-          deregisterError,
-          deregisterForceUpdate,
-          deregisterSetDatas,
+          deregisterNameDependencies,
           deregisterValidations,
           getFormData,
-          registerAlwaysUpdate,
           registerDependencies,
-          registerError,
           registerFocusedKeyValuePair,
-          registerForceUpdate,
-          registerSetData,
+          registerNameDependencies,
           registerValidations,
           setFormData,
           setFormDataWithRerender,

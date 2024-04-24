@@ -1,5 +1,6 @@
 import {
   convertObjectValueToString,
+  flattenObject,
   removeDuplicates,
   removeUndefinedFromObject,
 } from ".";
@@ -16,6 +17,142 @@ describe("utils", () => {
       const obj = { aaa: 111, bbb: { ccc: true } };
       const expectedResult = { aaa: "111", bbb: { ccc: "true" } };
       const result = convertObjectValueToString(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+  });
+  describe("flattenObject", () => {
+    it("SHOULD flatten level 1 object", () => {
+      const obj = { level1a: 111, level1b: true };
+      const expectedResult = { level1a: 111, level1b: true };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten level 2 object", () => {
+      const obj = { level1a: { level2a: 111, level2b: 222 }, level1b: true };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten level 3 object", () => {
+      const obj = {
+        level1a: { level2a: 111, level2b: { level3a: 111, level3b: 222 } },
+        level1b: true,
+      };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b.level3a": 111,
+        "level1a.level2b.level3b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten array", () => {
+      const obj = {
+        level1a: {
+          level2a: 111,
+          level2b: { level3a: [111, 222, 333], level3b: 222 },
+        },
+        level1b: true,
+      };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b.level3a.0": 111,
+        "level1a.level2b.level3a.1": 222,
+        "level1a.level2b.level3a.2": 333,
+        "level1a.level2b.level3b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten array object", () => {
+      const obj = {
+        level1a: {
+          level2a: 111,
+          level2b: {
+            level3a: [{ array1a: 111, array1b: 222 }, 222, 333],
+            level3b: 222,
+          },
+        },
+        level1b: true,
+      };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b.level3a.0.array1a": 111,
+        "level1a.level2b.level3a.0.array1b": 222,
+        "level1a.level2b.level3a.1": 222,
+        "level1a.level2b.level3a.2": 333,
+        "level1a.level2b.level3b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten array undefined", () => {
+      const obj = {
+        level1a: {
+          level2a: 111,
+          level2b: {
+            level3a: [undefined, 222, undefined],
+            level3b: 222,
+          },
+        },
+        level1b: true,
+      };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b.level3a.0": undefined,
+        "level1a.level2b.level3a.1": 222,
+        "level1a.level2b.level3a.2": undefined,
+        "level1a.level2b.level3b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten object undefined", () => {
+      const obj = {
+        level1a: {
+          level2a: 111,
+          level2b: {
+            level3a: undefined,
+            level3b: 222,
+          },
+        },
+        level1b: true,
+      };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b.level3a": undefined,
+        "level1a.level2b.level3b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
+      expect(result).toStrictEqual(expectedResult);
+    });
+    it("SHOULD flatten object null", () => {
+      const obj = {
+        level1a: {
+          level2a: 111,
+          level2b: {
+            level3a: null,
+            level3b: 222,
+          },
+        },
+        level1b: true,
+      };
+      const expectedResult = {
+        "level1a.level2a": 111,
+        "level1a.level2b.level3a": null,
+        "level1a.level2b.level3b": 222,
+        level1b: true,
+      };
+      const result = flattenObject(obj);
       expect(result).toStrictEqual(expectedResult);
     });
   });

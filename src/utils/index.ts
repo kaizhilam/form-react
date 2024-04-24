@@ -48,3 +48,27 @@ export function removeUndefinedFromObject(
 export function removeDuplicates<T>(data: T[]): T[] {
   return data.filter((value, index) => data.indexOf(value) === index);
 }
+
+/**
+ * A function that flattens object to {key: value}
+ * @param obj Object to flatten
+ * @returns Flattened object
+ */
+export function flattenObject(obj: Record<string, any>) {
+  let mutableObject: Record<string, any> = {};
+  const mutateObject = (
+    o: Record<string, any>,
+    key: string
+  ): Record<string, any> => {
+    Object.keys(o).forEach((k) => {
+      const valueToCompare = o[k];
+      if (typeof valueToCompare === "object" && valueToCompare !== null) {
+        mutableObject = mutateObject(valueToCompare, `${key}${k}.`);
+      } else {
+        mutableObject[`${key}${k}`] = valueToCompare;
+      }
+    });
+    return mutableObject;
+  };
+  return mutateObject(obj, "");
+}
