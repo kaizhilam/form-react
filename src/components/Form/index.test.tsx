@@ -436,4 +436,127 @@ describe("Form", () => {
       expect(check.textContent).toEqual("false");
     });
   });
+  describe("changed", () => {
+    it("SHOULD show changed false on render", () => {
+      render(
+        <Form>
+          {({ changed }) => (
+            <>
+              <div data-testid="check">{changed.toString()}</div>
+              <FormItem name="test">
+                {({ name, onChange, onBlur, value }) => (
+                  <input
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    data-testid={name}
+                    value={value as string}
+                  />
+                )}
+              </FormItem>
+              <button type="submit" data-testid="submit">
+                Submit
+              </button>
+            </>
+          )}
+        </Form>
+      );
+      const check = screen.getByTestId("check");
+      expect(check.textContent).toEqual("false");
+    });
+    it("SHOULD show changed true on change of data", () => {
+      render(
+        <Form data={{ test: "data" }}>
+          {({ changed }) => (
+            <>
+              <div data-testid="check">{changed.toString()}</div>
+              <FormItem name="test">
+                {({ name, onChange, onBlur, value }) => (
+                  <input
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    data-testid={name}
+                    value={value as string}
+                  />
+                )}
+              </FormItem>
+              <button type="submit" data-testid="submit">
+                Submit
+              </button>
+            </>
+          )}
+        </Form>
+      );
+      const check = screen.getByTestId("check");
+      expect(check.textContent).toEqual("false");
+      const test = screen.getByTestId("test");
+      simulateUserChange(test, { target: { value: "change data" } });
+      expect(check.textContent).toEqual("true");
+    });
+    it("SHOULD revert changed to false on reverting data to original", () => {
+      render(
+        <Form data={{ test: "data" }}>
+          {({ changed }) => (
+            <>
+              <div data-testid="check">{changed.toString()}</div>
+              <FormItem name="test">
+                {({ name, onChange, onBlur, value }) => (
+                  <input
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    data-testid={name}
+                    value={value as string}
+                  />
+                )}
+              </FormItem>
+              <button type="submit" data-testid="submit">
+                Submit
+              </button>
+            </>
+          )}
+        </Form>
+      );
+      const check = screen.getByTestId("check");
+      expect(check.textContent).toEqual("false");
+      const test = screen.getByTestId("test");
+      simulateUserChange(test, { target: { value: "change data" } });
+      expect(check.textContent).toEqual("true");
+      simulateUserChange(test, { target: { value: "data" } });
+      expect(check.textContent).toEqual("false");
+    });
+    it("SHOULD revert changed to false on reverting data to empty prepop", () => {
+      render(
+        <Form>
+          {({ changed }) => (
+            <>
+              <div data-testid="check">{changed.toString()}</div>
+              <FormItem name="test">
+                {({ name, onChange, onBlur, value }) => (
+                  <input
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    data-testid={name}
+                    value={value as string}
+                  />
+                )}
+              </FormItem>
+              <button type="submit" data-testid="submit">
+                Submit
+              </button>
+            </>
+          )}
+        </Form>
+      );
+      const check = screen.getByTestId("check");
+      expect(check.textContent).toEqual("false");
+      const test = screen.getByTestId("test");
+      simulateUserChange(test, { target: { value: "change data" } });
+      expect(check.textContent).toEqual("true");
+      simulateUserChange(test, { target: { value: "" } });
+      expect(check.textContent).toEqual("false");
+    });
+  });
 });

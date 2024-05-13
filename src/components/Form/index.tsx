@@ -159,9 +159,7 @@ export function Form(props: IForm) {
 
   const calculateChanged = () => {
     const calculatedChanged = Object.keys(modifiedFormData.current).some(
-      (field) =>
-        prepopData[field] !== undefined &&
-        modifiedFormData.current[field] !== prepopData[field]
+      (field) => modifiedFormData.current[field] !== (prepopData[field] ?? "")
     );
     if (changed !== calculatedChanged) {
       setChanged(calculatedChanged);
@@ -336,6 +334,7 @@ export function Form(props: IForm) {
         setFieldError: setErrors.current[name],
       });
     });
+    calculateChanged();
     onChange?.(generateOnChangeProps());
   };
 

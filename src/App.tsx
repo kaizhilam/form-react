@@ -4,8 +4,8 @@ import { Button, Switch, TextField } from "@mui/material";
 
 function App() {
   const [data, setData] = useState({
-    players: Array.from(Array(10).keys()).map((e) => ({ uid: e })),
-    test: 0,
+    players: Array.from(Array(10).keys()).map((e) => ({ uid: "" + e })),
+    test: "0",
   });
   return (
     <>
@@ -30,11 +30,12 @@ function App() {
           }}
           data={data}
         >
-          {({ submit, isValid }) => {
+          {({ submit, isValid, changed }) => {
             // console.log("isValid", isValid);
             return (
               <>
-                {isValid && <div>Valid</div>}
+                <div>{"isValid: " + isValid}</div>
+                <div>{"changed: " + changed}</div>
                 <FormItem
                   id="test"
                   label="test"
