@@ -358,7 +358,7 @@ describe("Form", () => {
     });
   });
   describe("isValid", () => {
-    it("SHOULD show isValid on render", () => {
+    it("SHOULD show isValid true on render", () => {
       render(
         <Form data={{ test: "notValid" }}>
           {({ isValid }) => (
@@ -393,7 +393,7 @@ describe("Form", () => {
         </Form>
       );
       const check = screen.getByTestId("check");
-      expect(check.textContent).toEqual("false");
+      expect(check.textContent).toEqual("true");
     });
     it("SHOULD show isValid false on data change", () => {
       render(

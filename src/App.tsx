@@ -4,7 +4,7 @@ import { Button, Switch, TextField } from "@mui/material";
 
 function App() {
   const [data, setData] = useState({
-    players: Array.from(Array(0).keys()).map((e) => ({ uid: e })),
+    players: Array.from(Array(10).keys()).map((e) => ({ uid: e })),
     test: 0,
   });
   return (
@@ -93,10 +93,16 @@ function App() {
                         name={`players.${index}.uid`}
                         validations={[
                           {
-                            expression: (data) => {
-                              return parseInt("" + data) % 2 === 0;
+                            expression: (data, formData) => {
+                              const currentNumbersArr = (
+                                formData.players as unknown as { uid: number }[]
+                              ).map((p) => p.uid);
+                              const sameNumberArr = currentNumbersArr.filter(
+                                (j) => parseInt("" + j) === parseInt("" + data)
+                              );
+                              return sameNumberArr.length > 1;
                             },
-                            message: "Cannot be even",
+                            message: "UID must be unnique",
                           },
                         ]}
                       >

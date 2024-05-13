@@ -64,9 +64,11 @@ export function FormItem(props: IFormItem) {
   const focused = useRef<boolean>(false);
 
   const {
+    deregisterAlwaysUpdate,
     deregisterNameDependencies,
     deregisterValidations,
     getFormData,
+    registerAlwaysUpdate,
     registerDependencies,
     registerFocusedKeyValuePair,
     registerNameDependencies,
@@ -134,8 +136,12 @@ export function FormItem(props: IFormItem) {
     } else {
       registerValidations(name, validations ?? []);
     }
+    if (validations?.some((v) => v.expression && v.expression.length > 1)) {
+      registerAlwaysUpdate(name);
+    }
     return () => {
       deregisterValidations(name);
+      deregisterAlwaysUpdate(name);
     };
   }, [validations]);
 

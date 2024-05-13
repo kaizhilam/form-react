@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import {
   flattenObject,
@@ -76,8 +77,9 @@ interface IForm {
   children:
     | React.ReactNode
     | ((formChildProps: {
-        submit: () => void;
+        changed: boolean;
         isValid: boolean;
+        submit: () => void;
       }) => React.ReactNode);
   data?: IFormData;
   wrapper?: React.ReactElement;
@@ -86,9 +88,11 @@ interface IForm {
 }
 
 interface IFormContext {
+  deregisterAlwaysUpdate: (fieldName: string) => void;
   deregisterNameDependencies: (fieldName: string) => void;
   deregisterValidations: (fieldName: string) => void;
   getFormData: (fieldName?: string) => IFormData | PrimitiveValue;
+  registerAlwaysUpdate: (fieldName: string) => void;
   registerDependencies: (fieldName: string, dependency: string) => void;
   registerFocusedKeyValuePair: (
     fieldName: string | undefined,
@@ -130,6 +134,7 @@ export function Form(props: IForm) {
   const modifiedFormData = useRef<IModifiedFormData>({});
 
   const alwaysUpdate = useRef<string[]>([]);
+  const [changed, setChanged] = useState<boolean>(false);
   const dependencies = useRef<IDependencies>({});
   const fieldWithError = useRef<IFieldWithError>({});
   const focusedKeyValuePair = useRef<IFocusKeyValue>({
@@ -137,22 +142,31 @@ export function Form(props: IForm) {
     fieldValue: undefined,
   });
   const forceUpdates = useRef<IForceUpdates>({});
-  const isValid = useRef<boolean>(true);
+  const [isValid, setIsValid] = useState<boolean>(true);
   const setDatas = useRef<ISetDatas>({});
   const setErrors = useRef<ISetErrors>({});
   const validations = useRef<IValidations>({});
 
   const calculateIsValid = () => {
-    const formData = getFormData() as IFormData;
-    const allFields = Object.keys(forceUpdates.current);
-    const containsError = allFields.some((f) => {
-      const result = triggerFieldValidation({
-        fieldName: f,
-        fieldValue: get(formData, f) as PrimitiveValue,
-      });
-      return result;
-    });
-    return !containsError;
+    const calculatedIsValid = !Object.values(fieldWithError.current).some(
+      (v) => !!v
+    );
+    if (isValid !== calculatedIsValid) {
+      setIsValid(calculatedIsValid);
+    }
+    return calculatedIsValid;
+  };
+
+  const calculateChanged = () => {
+    const calculatedChanged = Object.keys(modifiedFormData.current).some(
+      (field) =>
+        prepopData[field] !== undefined &&
+        modifiedFormData.current[field] !== prepopData[field]
+    );
+    if (changed !== calculatedChanged) {
+      setChanged(calculatedChanged);
+    }
+    return calculatedChanged;
   };
 
   const clearModifiedFormData = () => {
@@ -162,6 +176,11 @@ export function Form(props: IForm) {
         (prepopData[fieldName] as PrimitiveValue) ?? ""
       );
     });
+    calculateChanged();
+  };
+
+  const deregisterAlwaysUpdate = (fieldName: string) => {
+    alwaysUpdate.current = alwaysUpdate.current.filter((f) => f !== fieldName);
   };
 
   const deregisterNameDependencies = (fieldName: string) => {
@@ -233,7 +252,15 @@ export function Form(props: IForm) {
     alwaysUpdate.current.forEach((key) => {
       forceUpdates.current[key]();
     });
+    calculateChanged();
     onSubmit?.(generateOnChangeProps());
+  };
+
+  const registerAlwaysUpdate = (fieldName: string) => {
+    alwaysUpdate.current = removeDuplicates([
+      ...alwaysUpdate.current,
+      fieldName,
+    ]);
   };
 
   const registerNameDependencies = (param: IRegisterNameDependenciesParam) => {
@@ -304,7 +331,10 @@ export function Form(props: IForm) {
       forceUpdates.current[d]();
     });
     alwaysUpdate.current.forEach((name) => {
-      forceUpdates.current[name]();
+      triggerFieldValidation({
+        fieldName: name,
+        setFieldError: setErrors.current[name],
+      });
     });
     onChange?.(generateOnChangeProps());
   };
@@ -356,11 +386,7 @@ export function Form(props: IForm) {
         [fieldName]: false,
       };
     }
-    const newIsValid = !Object.values(fieldWithError.current).some((v) => !!v);
-    if (isValid.current !== newIsValid) {
-      isValid.current = newIsValid;
-      forceFormUpdate();
-    }
+    calculateIsValid();
     return validationTriggered;
   };
 
@@ -384,10 +410,9 @@ export function Form(props: IForm) {
   const childToRender =
     typeof children === "function"
       ? children({
+          changed,
+          isValid,
           submit: handleSubmit,
-          get isValid() {
-            return isValid.current;
-          },
         })
       : children;
 
@@ -397,9 +422,11 @@ export function Form(props: IForm) {
     <>
       <FormContext.Provider
         value={{
+          deregisterAlwaysUpdate,
           deregisterNameDependencies,
           deregisterValidations,
           getFormData,
+          registerAlwaysUpdate,
           registerDependencies,
           registerFocusedKeyValuePair,
           registerNameDependencies,
