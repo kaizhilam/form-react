@@ -74,6 +74,7 @@ export function FormItem(props: IFormItem) {
     registerNameDependencies,
     registerValidations,
     setFormData,
+    setFormDataEnd,
     setFormDataWithRerender,
     triggerFieldValidation,
   } = useContext(FormContext);
@@ -173,10 +174,12 @@ export function FormItem(props: IFormItem) {
       fieldValue,
       setFieldError: setError,
     });
+    setFormDataEnd();
   };
 
   const setFormValue = (fieldName: string, fieldValue: PrimitiveValue) => {
     setFormDataWithRerender(fieldName, fieldValue);
+    setFormDataEnd();
   };
 
   const childProps: IChildProps = {

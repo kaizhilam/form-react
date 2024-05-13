@@ -104,6 +104,7 @@ interface IFormContext {
     fieldValidations: IFieldValidation[]
   ) => void;
   setFormData: (name: string, value: PrimitiveValue) => void;
+  setFormDataEnd: () => void;
   setFormDataWithRerender: (name: string, value: PrimitiveValue) => void;
   triggerFieldValidation: ({
     fieldName,
@@ -151,9 +152,6 @@ export function Form(props: IForm) {
     const calculatedIsValid = !Object.values(fieldWithError.current).some(
       (v) => !!v
     );
-    if (isValid !== calculatedIsValid) {
-      setIsValid(calculatedIsValid);
-    }
     return calculatedIsValid;
   };
 
@@ -161,9 +159,6 @@ export function Form(props: IForm) {
     const calculatedChanged = Object.keys(modifiedFormData.current).some(
       (field) => modifiedFormData.current[field] !== (prepopData[field] ?? "")
     );
-    if (changed !== calculatedChanged) {
-      setChanged(calculatedChanged);
-    }
     return calculatedChanged;
   };
 
@@ -174,7 +169,8 @@ export function Form(props: IForm) {
         (prepopData[fieldName] as PrimitiveValue) ?? ""
       );
     });
-    calculateChanged();
+    setIsValid(true);
+    setChanged(false);
   };
 
   const deregisterAlwaysUpdate = (fieldName: string) => {
@@ -250,7 +246,7 @@ export function Form(props: IForm) {
     alwaysUpdate.current.forEach((key) => {
       forceUpdates.current[key]();
     });
-    calculateChanged();
+    setFormDataEnd();
     onSubmit?.(generateOnChangeProps());
   };
 
@@ -334,7 +330,11 @@ export function Form(props: IForm) {
         setFieldError: setErrors.current[name],
       });
     });
-    calculateChanged();
+  };
+
+  const setFormDataEnd = () => {
+    setChanged(calculateChanged());
+    setIsValid(calculateIsValid());
     onChange?.(generateOnChangeProps());
   };
 
@@ -373,19 +373,18 @@ export function Form(props: IForm) {
       }
     });
     if (validationTriggered) {
-      setFieldError?.(validationTriggered.message);
       fieldWithError.current = {
         ...fieldWithError.current,
         [fieldName]: true,
       };
+      setFieldError?.(validationTriggered.message);
     } else {
-      setFieldError?.("");
       fieldWithError.current = {
         ...fieldWithError.current,
         [fieldName]: false,
       };
+      setFieldError?.("");
     }
-    calculateIsValid();
     return validationTriggered;
   };
 
@@ -403,7 +402,6 @@ export function Form(props: IForm) {
     Object.keys(prepopData).forEach((k) => {
       setDatas.current[k](prepopData[k]);
     });
-    calculateIsValid();
   }, []);
 
   const childToRender =
@@ -425,6 +423,7 @@ export function Form(props: IForm) {
           deregisterNameDependencies,
           deregisterValidations,
           getFormData,
+          setFormDataEnd,
           registerAlwaysUpdate,
           registerDependencies,
           registerFocusedKeyValuePair,
