@@ -5,7 +5,12 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { FormContext, IFieldValidation, PrimitiveValue } from "../Form";
+import {
+  FormContext,
+  IFieldValidation,
+  IFormData,
+  PrimitiveValue,
+} from "../Form";
 
 interface IChildProps {
   disabled?: boolean;
@@ -25,6 +30,7 @@ interface IChildProps {
 }
 
 interface IChildActions {
+  formData: IFormData;
   getFieldValue: (fieldName: string) => PrimitiveValue;
   setFieldValue: (fieldValue: PrimitiveValue) => void;
   setFormValue: (fieldName: string, fieldValue: PrimitiveValue) => void;
@@ -196,6 +202,10 @@ export function FormItem(props: IFormItem) {
   };
 
   const childActions: IChildActions = {
+    get formData() {
+      registerAlwaysUpdate(name);
+      return getFormData() as IFormData;
+    },
     getFieldValue: (fieldName) => {
       registerDependencies(name, fieldName);
       return getFieldValue(fieldName);

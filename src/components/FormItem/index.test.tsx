@@ -483,6 +483,42 @@ describe("FormItem", () => {
     });
   });
   describe("childAction", () => {
+    describe("formData", () => {
+      it("SHOULD show hide base on formData", () => {
+        render(
+          <Form>
+            <FormItem name="test1">
+              {({ name, onChange, onBlur, value }, { setFormValue }) => (
+                <input
+                  name={name}
+                  onChange={onChange}
+                  onBlur={(e) => {
+                    onBlur(e);
+                    setFormValue("test2", e.target.value);
+                  }}
+                  data-testid={name}
+                  value={value as string}
+                />
+              )}
+            </FormItem>
+            <FormItem name="span-show">
+              {(_, { formData }) => {
+                if (formData["test2"] === "show") {
+                  return <span data-testid="span-show">show</span>;
+                }
+              }}
+            </FormItem>
+            <button type="submit" data-testid="submit">
+              Submit
+            </button>
+          </Form>
+        );
+        const test1 = screen.getByTestId("test1");
+        simulateUserChange(test1, { target: { value: "show" } });
+        const spanShow = screen.queryByTestId("span-show");
+        expect(spanShow).toBeInTheDocument();
+      });
+    });
     describe("getFieldValue", () => {
       it("SHOULD show hide base on getFieldValue", () => {
         render(

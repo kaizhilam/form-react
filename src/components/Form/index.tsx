@@ -325,10 +325,13 @@ export function Form(props: IForm) {
       forceUpdates.current[d]();
     });
     alwaysUpdate.current.forEach((name) => {
-      triggerFieldValidation({
+      const triggered = triggerFieldValidation({
         fieldName: name,
         setFieldError: setErrors.current[name],
       });
+      if (!triggered) {
+        forceUpdates.current[name]();
+      }
     });
   };
 

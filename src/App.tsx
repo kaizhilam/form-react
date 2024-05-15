@@ -4,7 +4,7 @@ import { Button, Switch, TextField } from "@mui/material";
 
 function App() {
   const [data, setData] = useState({
-    players: Array.from(Array(10).keys()).map((e) => ({ uid: "" + e })),
+    players: Array.from(Array(0).keys()).map((e) => ({ uid: "" + e })),
     test: "0",
   });
   return (
@@ -78,8 +78,8 @@ function App() {
                   }}
                 </FormItem>
                 <FormItem name="showHideSpan">
-                  {(props, { getFieldValue, setFormValue }) => {
-                    const showHide = getFieldValue("showHide");
+                  {(props, { formData }) => {
+                    const showHide = formData["showHide"];
                     if (showHide === "show") {
                       return <span>Show</span>;
                     }
